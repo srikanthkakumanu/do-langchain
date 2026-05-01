@@ -11,7 +11,7 @@ dependencies = [
     "bs4>=0.0.2",
     "ipython>=9.12.0",
     "tiktoken>=0.12.0",
-    "langchain[anthropic,google-genai,groq,mistralai,openai]>=1.2.15",
+    "langchain[anthropic,google-genai,groq,mistralai,openai]>=1.2.16",
     "python-dotenv>=1.2.2",
     "ipykernel>=7.2.0",
     "langchain-tavily>=0.2.18",
@@ -27,6 +27,7 @@ dependencies = [
     "langchain-google-vertexai>=3.2.3",
     "langsmith>=0.7.38",
     "jupyterlab>=4.5.7",
+    "langchain-community>=0.4.1",
 ]
 
 [build-system]
