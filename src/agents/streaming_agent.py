@@ -5,12 +5,12 @@ from langchain.messages import HumanMessage, AIMessage
 load_dotenv()
 
 
-def createAgent(model: str):
+def create_agent(model: str):
     return create_agent(model=model)
 
 
 def stream_simple():
-    agent = createAgent("groq:llama-3.1-8b-instant")
+    agent = create_agent("groq:llama-3.1-8b-instant")
 
     for token, metadata in agent.stream(
         {"messages": [HumanMessage(content="What is the capital of France?")]},
@@ -24,7 +24,7 @@ def stream_simple():
 
 
 def stream_history(messages):
-    agent = createAgent("groq:llama-3.1-8b-instant")
+    agent = create_agent("groq:llama-3.1-8b-instant")
 
     for token, metadata in agent.stream(
         messages,
