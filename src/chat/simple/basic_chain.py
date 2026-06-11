@@ -1,5 +1,5 @@
 """
-LangChain Core Concepts - LCEL and Runnables
+LangChain Core Concepts - LCEL and Runnables (chain)
 """
 
 from dotenv import load_dotenv
