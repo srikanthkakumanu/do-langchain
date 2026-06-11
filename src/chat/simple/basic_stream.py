@@ -1,5 +1,5 @@
 """
-LangChain Core Concepts - LCEL and Runnables (chain)
+LangChain Core Concepts - LCEL and Runnables (chain) and streaming
 """
 
 from dotenv import load_dotenv, main
@@ -11,34 +11,30 @@ from langchain_core.output_parsers import StrOutputParser
 
 load_dotenv()
 
-prompt_template = "You are a helpful assistant. Answer in one sentence: {question}"
-
-prompt_template = "Translate to french: {text}"
+prompt_template = "Write a haiku about: {topic}"
 
 
-def basic_batch_execution_openai():
-    """Demonstrate basic batch execution for multiple inputs with OpenAI"""
+def basic_stream_openai():
+    """Demonstrate basic streaming for real-time output with OpenAI"""
 
     prompt = ChatPromptTemplate.from_template(prompt_template)
-    model = ChatOpenAI(model="gpt-5-nano", temperature=0.7)
+    model = ChatOpenAI(
+        model="gpt-5-nano",
+        temperature=0.7,
+    )
     parser = StrOutputParser()
 
     chain = prompt | model | parser
 
-    # Batch - run with multiple inputs
-    inputs = [
-        {"text": "Hello, how are you?"},
-        {"text": "What is your name?"},
-        {"text": "Where is the nearest restaurant?"},
-    ]
-    results = chain.batch(inputs)
-
-    for text in zip(inputs, results):
-        print(f"Input: {text[0]['text']} -> Output: {text[1]}")
+    # Streaming - run with streaming enabled
+    print("Streaming output: ")
+    for chunk in chain.stream({"topic": "nature"}):
+        print(chunk, end="", flush=True)
+    print()  # for newline after streaming
 
 
-def basic_batch_execution_google():
-    """Demonstrate basic batch execution for multiple inputs with Google Gemini"""
+def basic_stream_google():
+    """Demonstrate basic streaming for real-time output with Google Gemini"""
 
     prompt = ChatPromptTemplate.from_template(prompt_template)
     model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.7)
@@ -46,20 +42,15 @@ def basic_batch_execution_google():
 
     chain = prompt | model | parser
 
-    # Batch - run with multiple inputs
-    inputs = [
-        {"text": "Hello, how are you?"},
-        {"text": "What is your name?"},
-        {"text": "Where is the nearest restaurant?"},
-    ]
-    results = chain.batch(inputs)
-
-    for text in zip(inputs, results):
-        print(f"Input: {text[0]['text']} -> Output: {text[1]}")
+    # Streaming - run with streaming enabled
+    print("Streaming output: ")
+    for chunk in chain.stream({"topic": "nature"}):
+        print(chunk, end="", flush=True)
+    print()  # for newline after streaming
 
 
-def basic_batch_execution_groq():
-    """Demonstrate basic batch execution for multiple inputs with Groq"""
+def basic_stream_groq():
+    """Demonstrate basic streaming for real-time output with Groq"""
 
     prompt = ChatPromptTemplate.from_template(prompt_template)
     model = ChatGroq(model="llama-3.1-8b-instant", temperature=0.7)
@@ -67,25 +58,20 @@ def basic_batch_execution_groq():
 
     chain = prompt | model | parser
 
-    # Batch - run with multiple inputs
-    inputs = [
-        {"text": "Hello, how are you?"},
-        {"text": "What is your name?"},
-        {"text": "Where is the nearest restaurant?"},
-    ]
-    results = chain.batch(inputs)
-
-    for text in zip(inputs, results):
-        print(f"Input: {text[0]['text']} -> Output: {text[1]}")
+    # Streaming - run with streaming enabled
+    print("Streaming output: ")
+    for chunk in chain.stream({"topic": "nature"}):
+        print(chunk, end="", flush=True)
+    print()  # for newline after streaming
 
 
 def main():
     # print("--- Calling OpenAI ---")
-    # basic_batch_execution_openai()
+    # basic_stream_openai()
     print("\n--- Calling Google Gemini ---")
-    basic_batch_execution_google()
+    basic_stream_google()
     print("\n--- Calling Groq ---")
-    basic_batch_execution_groq()
+    basic_stream_groq()
 
 
 if __name__ == "__main__":
