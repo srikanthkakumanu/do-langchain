@@ -1,5 +1,5 @@
 """
-LangChain Core Concepts - LCEL and Runnables (chain) and streaming
+LangChain Core Concepts - LCEL and Runnables (chain) and streaming - Old Way
 """
 
 from dotenv import load_dotenv, main

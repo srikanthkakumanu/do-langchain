@@ -10,7 +10,7 @@ prompt = "What is smallest particle in the atomic structure?"
 
 # Initialize a dictionary of models to compare
 llms = {
-    # "OpenAI (gpt-5-nano)": ChatOpenAI(model="gpt-5-nano", temperature=0),
+    "OpenAI (gpt-5-nano)": ChatOpenAI(model="gpt-5-nano", temperature=0),
     "Groq (llama-3.1-8b-instant)": ChatGroq(
         model="llama-3.1-8b-instant", temperature=0
     ),
