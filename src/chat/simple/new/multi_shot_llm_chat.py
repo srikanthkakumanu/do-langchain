@@ -19,7 +19,11 @@ The code is structured to allow easy addition of new models and
 response formats in the future.
 """
 
-load_dotenv()
+
+def load_environment_variables():
+    """Loads environment variables from a .env file."""
+    load_dotenv()
+
 
 sys_prompt = "You are a helpful assistant that provides concise and accurate answers to user queries."
 human_prompt = "What is the capital of France?"
@@ -97,6 +101,9 @@ def print_model_response(response: AIMessage):
 
 def main():
     """Main function to invoke models, multi-shot conversations and print their responses."""
+
+    load_environment_variables()
+
     for llm_name in llms.keys():
         llm = get_model(llm_name)
         messages: list[BaseMessage] = [HumanMessage(content=human_prompt)]
