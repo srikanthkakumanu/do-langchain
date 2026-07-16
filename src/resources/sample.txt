@@ -1,0 +1,9 @@
+LangChain is a framework for developing applications powered by large language models (LLMs).
+
+It provides building blocks for prompt templates, chat models, output parsers, document loaders,
+retrievers, and agents so that these pieces can be composed together into end-to-end pipelines.
+
+Document loaders are one of these building blocks. They read data from a source, such as a
+local file, a web page, or a database, and convert it into a list of LangChain Document objects.
+Each Document has two parts: page_content, the raw text, and metadata, a dictionary describing
+where the text came from.
