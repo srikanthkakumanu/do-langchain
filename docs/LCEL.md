@@ -2,6 +2,21 @@
 
 **LCEL (LangChain Expression Language)** is a declarative way to compose chains using the `|` (pipe) operator, similar to Unix pipes.
 
+## Table of Contents
+
+- [Core ideas](#core-ideas)
+- [Composition primitives](#composition-primitives)
+- [Example](#example)
+- [Composition Patterns](#composition-patterns)
+  - [Basic sequential chain](#basic-sequential-chain)
+  - [Parallel chain](#parallel-chain)
+  - [Branching chain](#branching-chain)
+  - [Custom step chain](#custom-step-chain)
+  - [Passthrough chain](#passthrough-chain)
+  - [Streaming chain](#streaming-chain)
+  - [Batching chain](#batching-chain)
+  - [Structured output chain](#structured-output-chain)
+
 ## Core ideas
 
 - **Composability** — chain components together: `prompt | model | output_parser`. Each piece implements the common `Runnable` interface.
@@ -35,75 +50,91 @@ result = chain.invoke({"topic": "bears"})
 - Streaming and batching the same chain
 - Structured output parsing
 
-**Basic sequential chain** — runs each step one after another, passing the output of one step into the next. Use it for simple linear flows like prompt, model, then parser.
+### Basic sequential chain
 
-  ```python
-  chain = prompt | model | StrOutputParser()
-  result = chain.invoke({"topic": "LangChain"})
-  ```
+Runs each step one after another, passing the output of one step into the next. Use it for simple linear flows like prompt, model, then parser.
 
-**Parallel chain** — runs multiple independent branches with the same input and returns their outputs together. Use it when one input should produce several results.
+```python
+chain = prompt | model | StrOutputParser()
+result = chain.invoke({"topic": "LangChain"})
+```
 
-  ```python
-  chain = {
-      "summary": summary_chain,
-      "keywords": keyword_chain,
-  }
-  result = chain.invoke({"text": document})
-  ```
+### Parallel chain
 
-**Branching chain** — chooses one chain from multiple options based on a condition. Use it when different inputs need different handling.
+Runs multiple independent branches with the same input and returns their outputs together. Use it when one input should produce several results.
 
-  ```python
-  from langchain_core.runnables import RunnableBranch
+```python
+chain = {
+    "summary": summary_chain,
+    "keywords": keyword_chain,
+}
+result = chain.invoke({"text": document})
+```
 
-  chain = RunnableBranch(
-      (lambda x: x["type"] == "math", math_chain),
-      general_chain,
-  )
-  result = chain.invoke({"type": "math", "question": "2 + 2"})
-  ```
+### Branching chain
 
-**Custom step chain** — adds normal Python logic into an LCEL flow with `RunnableLambda`. Use it for small transformations, cleanup, or formatting.
+Chooses one chain from multiple options based on a condition. Use it when different inputs need different handling.
 
-  ```python
-  from langchain_core.runnables import RunnableLambda
+```python
+from langchain_core.runnables import RunnableBranch
 
-  clean_input = RunnableLambda(lambda text: text.strip().lower())
-  chain = clean_input | prompt | model
-  result = chain.invoke("  Explain LCEL  ")
-  ```
+chain = RunnableBranch(
+    (lambda x: x["type"] == "math", math_chain),
+    general_chain,
+)
+result = chain.invoke({"type": "math", "question": "2 + 2"})
+```
 
-**Passthrough chain** — keeps the original input while adding extra computed values. Use it when a prompt needs both the user's input and additional context.
+### Custom step chain
 
-  ```python
-  from langchain_core.runnables import RunnablePassthrough
+Adds normal Python logic into an LCEL flow with `RunnableLambda`. Use it for small transformations, cleanup, or formatting.
 
-  chain = RunnablePassthrough.assign(context=retriever) | prompt | model
-  result = chain.invoke({"question": "What is LCEL?"})
-  ```
+```python
+from langchain_core.runnables import RunnableLambda
 
-**Streaming chain** — emits output chunks as they are produced. Use it for chat interfaces or long responses where the user should see progress immediately.
+clean_input = RunnableLambda(lambda text: text.strip().lower())
+chain = clean_input | prompt | model
+result = chain.invoke("  Explain LCEL  ")
+```
 
-  ```python
-  for chunk in chain.stream({"topic": "LCEL"}):
-      print(chunk, end="")
-  ```
+### Passthrough chain
 
-**Batching chain** — runs the same chain across many inputs at once. Use it for processing multiple prompts, documents, or records efficiently.
+Keeps the original input while adding extra computed values. Use it when a prompt needs both the user's input and additional context.
 
-  ```python
-  results = chain.batch([
-      {"topic": "LCEL"},
-      {"topic": "Runnables"},
-  ])
-  ```
+```python
+from langchain_core.runnables import RunnablePassthrough
 
-**Structured output chain** — parses model output into a predictable format, such as plain text, JSON, or a Pydantic object. Use it when later code needs reliable fields instead of free-form text.
+chain = RunnablePassthrough.assign(context=retriever) | prompt | model
+result = chain.invoke({"question": "What is LCEL?"})
+```
 
-  ```python
-  from langchain_core.output_parsers import JsonOutputParser
+### Streaming chain
 
-  chain = prompt | model | JsonOutputParser()
-  result = chain.invoke({"topic": "LCEL"})
-  ```
+Emits output chunks as they are produced. Use it for chat interfaces or long responses where the user should see progress immediately.
+
+```python
+for chunk in chain.stream({"topic": "LCEL"}):
+    print(chunk, end="")
+```
+
+### Batching chain
+
+Runs the same chain across many inputs at once. Use it for processing multiple prompts, documents, or records efficiently.
+
+```python
+results = chain.batch([
+    {"topic": "LCEL"},
+    {"topic": "Runnables"},
+])
+```
+
+### Structured output chain
+
+Parses model output into a predictable format, such as plain text, JSON, or a Pydantic object. Use it when later code needs reliable fields instead of free-form text.
+
+```python
+from langchain_core.output_parsers import JsonOutputParser
+
+chain = prompt | model | JsonOutputParser()
+result = chain.invoke({"topic": "LCEL"})
+```

@@ -5,23 +5,24 @@ from langchain.messages import HumanMessage, AIMessage
 load_dotenv()
 
 
-def createAgent(model: str):
+def build_agent(model: str):
     return create_agent(model=model)
 
 
 def simple():
-    agent = createAgent("groq:llama-3.1-8b-instant")
+    """A single question, no prior history."""
 
+    agent = build_agent("groq:llama-3.1-8b-instant")
     response = agent.invoke(
         {"messages": [HumanMessage(content="What is the capital of France?")]}
     )
-    print(response)
     print(response["messages"][-1].content)
 
 
 def send_history_to_agent():
-    agent = createAgent("groq:llama-3.1-8b-instant")
+    """A follow-up question that only makes sense given the earlier turns."""
 
+    agent = build_agent("groq:llama-3.1-8b-instant")
     response = agent.invoke(
         {
             "messages": [
@@ -31,12 +32,14 @@ def send_history_to_agent():
             ]
         }
     )
-    print(response)
     print(response["messages"][-1].content)
 
 
 def main():
-    # simple()
+    print("=== No history ===")
+    simple()
+
+    print("\n=== With history ===")
     send_history_to_agent()
 
 

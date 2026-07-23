@@ -5,40 +5,29 @@ from langchain.messages import HumanMessage, AIMessage
 load_dotenv()
 
 
-def create_agent(model: str):
+def build_agent(model: str):
     return create_agent(model=model)
 
 
+def stream_tokens(messages):
+    """Prints each token as the model produces it, instead of waiting for the full response."""
+
+    agent = build_agent("groq:llama-3.1-8b-instant")
+
+    # stream_mode="messages" yields (token, metadata) pairs: token is a message
+    # chunk, metadata says which node produced it.
+    for token, _metadata in agent.stream(messages, stream_mode="messages"):
+        if token.content:
+            print(token.content, end="", flush=True)
+    print()
+
+
 def stream_simple():
-    agent = create_agent("groq:llama-3.1-8b-instant")
-
-    for token, metadata in agent.stream(
-        {"messages": [HumanMessage(content="What is the capital of France?")]},
-        stream_mode="messages",
-    ):
-        # token is a message chunk with token content
-        # metadata contains which node produced the token
-
-        if token.content:  # Check if there's actual content
-            print(token.content, end="", flush=True)  # Print token
+    stream_tokens({"messages": [HumanMessage(content="What is the capital of France?")]})
 
 
-def stream_history(messages):
-    agent = create_agent("groq:llama-3.1-8b-instant")
-
-    for token, metadata in agent.stream(
-        messages,
-        stream_mode="messages",
-    ):
-        # token is a message chunk with token content
-        # metadata contains which node produced the token
-        if token.content:  # Check if there's actual content
-            print(token.content, end="", flush=True)  # Print token
-
-
-def main():
-    # stream_simple()
-    stream_history(
+def stream_history():
+    stream_tokens(
         {
             "messages": [
                 HumanMessage(content="What is the capital of France?"),
@@ -47,6 +36,14 @@ def main():
             ]
         }
     )
+
+
+def main():
+    print("=== No history ===")
+    stream_simple()
+
+    print("\n=== With history ===")
+    stream_history()
 
 
 if __name__ == "__main__":

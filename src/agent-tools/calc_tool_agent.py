@@ -1,12 +1,9 @@
 from dotenv import load_dotenv
 from langchain.agents import create_agent
-from langchain.messages import HumanMessage, AIMessage
+from langchain.messages import HumanMessage
 from langchain.tools import tool
 
-
 load_dotenv()
-
-# Tool Creation
 
 
 @tool
@@ -26,31 +23,28 @@ def multiply(x: int, y: int) -> int:
     return x * y
 
 
-# print(square_root.invoke({"x": 16}))
-# print(add.invoke({"x": 5, "y": 7}))
-# print(multiply.invoke({"x": 3, "y": 4}))
-
-# Adding Tools to an Agent
-
-
-def createAgent():
-    agent = create_agent(
+def build_agent():
+    return create_agent(
         model="google_genai:gemini-2.5-flash",
         tools=[square_root, add, multiply],
         system_prompt="You are an arithmetic wizard. Use your tools to calculate the square root, sum, or product of numbers.",
     )
-    return agent
 
 
-question = HumanMessage(content="What is the square root of 467?")
+def main():
+    agent = build_agent()
+    question = HumanMessage(content="What is the square root of 467?")
+    response = agent.invoke({"messages": [question]})
 
-response = createAgent().invoke({"messages": [question]})
+    # Walk the message history to show which tools the model called.
+    for message in response["messages"]:
+        if getattr(message, "tool_calls", None):
+            print(
+                f"Tool calls found in {message.__class__.__name__}:\n{message.tool_calls}\n"
+            )
 
-# Iterate through the message history to inspect tool calls
-for message in response["messages"]:
-    if getattr(message, "tool_calls", None):
-        print(
-            f"Tool calls found in {message.__class__.__name__}:\n{message.tool_calls}\n"
-        )
+    print(f"Final Answer: {response['messages'][-1].content}")
 
-print(f"Final Answer: {response['messages'][-1].content}")
+
+if __name__ == "__main__":
+    main()

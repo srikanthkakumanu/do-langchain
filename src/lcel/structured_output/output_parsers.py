@@ -2,11 +2,6 @@
 Output parsers and Structured output using LangChain V.1
 """
 
-from email import parser
-from pyexpat import model
-
-from typer import prompt
-
 from utils.llm_utils import load_environment_variables, get_model
 from langchain_core.output_parsers import (
     StrOutputParser,
@@ -17,11 +12,10 @@ from langchain_core.output_parsers import (
     MarkdownListOutputParser,
     NumberedListOutputParser,
     XMLOutputParser,
-    PydanticToolsParser
+    PydanticToolsParser,
 )
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
-from typing import List, Optional
 
 
 load_environment_variables()
@@ -67,7 +61,7 @@ def pydantic_structured_output_parser():
     # Define schema
     class Recipe(BaseModel):
         name: str = Field(description="Name of the recipe")
-        ingredients: List[str] = Field(description="List of ingredients")
+        ingredients: list[str] = Field(description="List of ingredients")
         prep_time_minutes: int = Field(description="Preparation time in minutes")
         difficulty: str = Field(description="easy, medium, or hard")
 
@@ -196,16 +190,23 @@ def pydantic_tools_parser():
         print(f"Location: {result[0].location}")
 
 
+DEMOS = [
+    string_output_parser,
+    json_output_parser,
+    pydantic_structured_output_parser,
+    simple_json_output_parser,
+    comma_separated_list_output_parser,
+    markdown_list_output_parser,
+    numbered_list_output_parser,
+    xml_output_parser,
+    pydantic_tools_parser,
+]
+
+
 def main():
-    # string_output_parser()
-    # json_output_parser()
-    # pydantic_structured_output_parser()
-    # simple_json_output_parser()
-    # comma_separated_list_output_parser()
-    # markdown_list_output_parser()
-    # numbered_list_output_parser()
-    # xml_output_parser()
-    pydantic_tools_parser()
+    for demo in DEMOS:
+        print(f"\n=== {demo.__name__} ===")
+        demo()
 
 
 if __name__ == "__main__":

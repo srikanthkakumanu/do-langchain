@@ -1,8 +1,9 @@
+from typing import Any
+
 from dotenv import load_dotenv
 from langchain.agents import create_agent
-from langchain.tools import tool
 from langchain.messages import HumanMessage
-from typing import Any, Dict
+from langchain.tools import tool
 from tavily import TavilyClient
 
 load_dotenv()
@@ -10,7 +11,7 @@ tavily_client = TavilyClient()
 
 
 @tool
-def web_search(query: str) -> Dict[str, Any]:
+def web_search(query: str) -> dict[str, Any]:
     """Search the web for information"""
 
     return tavily_client.search(query)

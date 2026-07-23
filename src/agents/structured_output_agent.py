@@ -1,9 +1,19 @@
 from dotenv import load_dotenv
 from langchain.agents import create_agent
-from langchain.messages import HumanMessage, AIMessage
+from langchain.messages import HumanMessage
 from pydantic import BaseModel, Field
 
 load_dotenv()
+
+# provider:model strings understood by create_agent.
+# Each provider needs its own API key in .env (GOOGLE_API_KEY, OPENAI_API_KEY,
+# ANTHROPIC_API_KEY, GROQ_API_KEY).
+models = {
+    "gemini": "google_genai:gemini-2.5-flash",
+    "openai": "openai:gpt-5-nano",
+    "claude": "anthropic:claude-opus-4-8",
+    "groq": "groq:llama-3.1-8b-instant",
+}
 
 
 class CosmologyInfo(BaseModel):
@@ -18,7 +28,7 @@ class CosmologyInfo(BaseModel):
     )
 
 
-def createAgent(model: str):
+def build_agent(model: str):
     system_prompt = """You are an expert in Cosmology. Your goal is to answer the user's question accurately.
     You must provide your response in the requested structured format, including the answer, a confidence score, and a list of sources.
     - The answer should be a clear and concise response to the question.
@@ -31,13 +41,12 @@ def createAgent(model: str):
     )
 
 
-def simple(message: str):
-    agent = createAgent("groq:llama-3.1-8b-instant")
+def run(message: str, model_key: str = "gemini"):
+    agent = build_agent(models[model_key])
     response = agent.invoke({"messages": [HumanMessage(content=message)]})
     structured_response = response.get("structured_response")
-    print(response["structured_response"])
+
     if structured_response:
-        print(structured_response)
         print(f"Answer: {structured_response.answer}")
         print(f"Confidence: {structured_response.confidence}")
         print(f"Sources: {structured_response.sources}")
@@ -48,7 +57,11 @@ def simple(message: str):
 
 
 def main():
-    simple("What is oldest galaxy in the universe?")
+    question = "What is oldest galaxy in the universe?"
+
+    for model_key in models:
+        print(f"\n=== {model_key} ({models[model_key]}) ===\n")
+        run(question, model_key)
 
 
 if __name__ == "__main__":
