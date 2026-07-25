@@ -24,8 +24,22 @@ def load_environment_variables():
 _MODEL_CONFIG = {
     "llama": {"model": "llama-3.1-8b-instant", "model_provider": "groq"},
     "llama70b": {"model": "llama-3.3-70b-versatile", "model_provider": "groq"},
-    "gemini": {"model": "gemini-2.5-flash", "model_provider": "google_genai"},
-    "openai": {"model": "gpt-5-nano", "model_provider": "openai"},
+    # thinking_budget=0 disables Gemini's internal reasoning tokens, which
+    # otherwise eat into max_tokens and can leave little/no room for the
+    # visible answer (observed as truncated content, finish_reason MAX_TOKENS).
+    "gemini": {
+        "model": "gemini-2.5-flash",
+        "model_provider": "google_genai",
+        "thinking_budget": 0,
+    },
+    # reasoning_effort="minimal" curbs gpt-5-nano's internal reasoning tokens,
+    # which otherwise can consume the entire max_tokens budget and leave the
+    # visible content empty (observed as finish_reason "length", content "").
+    "openai": {
+        "model": "gpt-5-nano",
+        "model_provider": "openai",
+        "reasoning_effort": "minimal",
+    },
     "claude": {"model": "claude-opus-4-8", "model_provider": "anthropic"},
 }
 

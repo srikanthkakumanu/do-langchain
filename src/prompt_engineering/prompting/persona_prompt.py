@@ -1,9 +1,8 @@
 """
 Role / persona prompting using LangChain v1's unified chat model interface (init_chat_model).
 
-Assigns the model a persona and a couple of few-shot example turns via the
-system prompt, then asks it a new question in that voice, across multiple
-providers.
+Assigns the model a persona via the system prompt alone, then asks it a
+question in that voice, across multiple providers.
 """
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, message_to_dict
@@ -11,16 +10,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, mess
 from utils.llm_utils import get_model, invoke_model, load_environment_variables
 
 SYSTEM_PROMPT = """You are an expert in Cosmology, answering questions at the user's request
-about the universe.
-
-Please keep to the below structure.
-
-User: What is the nearest star to Earth?
-Cosmologist: The nearest star to Earth is the Sun.
-
-User: How old is this Universe?
-Cosmologist: This Universe is approximately 13.4 billion years old.
-"""
+about the universe. Answer in one short sentence."""
 
 QUESTION = "What is the oldest galaxy in the universe?"
 
@@ -36,7 +26,10 @@ def print_model_response(response: AIMessage):
 
 def _ask(model_name: str):
     llm = get_model(model_name)
-    messages = [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=QUESTION)]
+    messages: list[SystemMessage | HumanMessage] = [
+        SystemMessage(content=SYSTEM_PROMPT),
+        HumanMessage(content=QUESTION),
+    ]
 
     response = invoke_model(llm, messages)
     print_model_response(response)
@@ -63,7 +56,7 @@ def main():
 
     load_environment_variables()
 
-    for fn in (llama, gemini, openai, claude):
+    for fn in (llama, gemini, openai):
         fn()
 
 

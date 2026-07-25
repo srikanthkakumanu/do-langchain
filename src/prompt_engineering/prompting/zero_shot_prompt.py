@@ -43,7 +43,7 @@ def main():
 
     load_environment_variables()
 
-    for fn in (llama, gemini, openai, claude):
+    for fn in (llama, gemini, openai):
         print_model_response(fn())
 
 
