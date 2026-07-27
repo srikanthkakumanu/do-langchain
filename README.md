@@ -1,4 +1,4 @@
-<!-- markdownlint-disable MD029 -- Learning Path uses one continuous 1-28 sequence across sections, by design. -->
+<!-- markdownlint-disable MD029 -- Learning Path uses one continuous 1-32 sequence across sections, by design. -->
 
 # Overview
 
@@ -17,6 +17,7 @@ Explore the LangChain, LangGraph, and LangChain Protocol Python packages.
   7. [Agents & Tools](#7-agents--tools)
   8. [Conversation Memory](#8-conversation-memory)
   9. [Securing Prompts](#9-securing-prompts)
+  10. [LLM Reliability & Cost](#10-llm-reliability--cost)
 - [Bonus: Notebooks](#bonus-notebooks)
 
 ## Docs
@@ -25,6 +26,7 @@ Explore the LangChain, LangGraph, and LangChain Protocol Python packages.
 - [docs/Prompt_Engineering.md](docs/Prompt_Engineering.md) — Prompt anatomy, core prompting techniques (zero-shot, few-shot, role, structured output, etc.), and the agentic **Patterns** built from them (ReAct, Chain-of-Thought, Self-Consistency, Tree-of-Thought, injection-resistant system prompts, conversation memory), with a side-by-side comparison table.
 - [docs/LCEL.md](docs/LCEL.md) — LangChain Expression Language: composing chains with the `|` operator, `Runnable` primitives (`RunnableLambda`, `RunnableParallel`, `RunnableBranch`, `RunnablePassthrough`), and common composition patterns.
 - [docs/Context_Engineering.md](docs/Context_Engineering.md) — Getting external data into a model's context: document loaders (`TextLoader`, `WebBaseLoader`, `DirectoryLoader`, `PyPDFLoader`), text splitters (`CharacterTextSplitter`, `RecursiveCharacterTextSplitter`, `TokenTextSplitter`, `MarkdownHeaderTextSplitter`, language-aware splitting), and chunking strategy (`chunk_size`/`chunk_overlap` tuning) to produce good retrieval chunks.
+- [docs/LLM_Reliability_Cost.md](docs/LLM_Reliability_Cost.md) — Making LLM calls production-ready across OpenAI, Groq, Gemini, and Claude: retries and exponential backoff, client-side rate limiting (`InMemoryRateLimiter`), token counting (pre-call estimates vs. `usage_metadata`), and cost estimation, including the per-provider gotchas (Gemini's collapsed exception type, Groq's missing tokenizer) you hit in practice.
 
 ## Learning Path
 
@@ -104,6 +106,15 @@ Now that agents can act, give them memory across turns. See [docs/Prompt_Enginee
 The capstone: harden everything above against a user or a retrieved document trying to hijack the agent's instructions. See [docs/Prompt_Engineering.md § System Prompts & Injection-Resistant Design](docs/Prompt_Engineering.md#system-prompts--injection-resistant-design).
 
 28. **Injection-resistant system prompt design** — [src/prompt_engineering/SystemPrompt_Pattern.py](src/prompt_engineering/SystemPrompt_Pattern.py)
+
+### 10. LLM Reliability & Cost
+
+Everything above assumes a call succeeds. Close the loop: handle it when a call fails, avoid triggering failures in the first place, and know what each call actually costs — across all four providers used in this repo. See [docs/LLM_Reliability_Cost.md](docs/LLM_Reliability_Cost.md).
+
+29. **Retries and exponential backoff** (built-in `max_retries` and custom `tenacity` policies) — [src/llm_reliability/retries_and_backoff.py](src/llm_reliability/retries_and_backoff.py)
+30. **Client-side rate limiting** (`InMemoryRateLimiter`) — [src/llm_reliability/rate_limiting.py](src/llm_reliability/rate_limiting.py)
+31. **Token counting** (pre-call estimates vs. actual `usage_metadata`) — [src/llm_reliability/token_counting.py](src/llm_reliability/token_counting.py)
+32. **Cost estimation** (pricing table + cross-provider `get_usage_metadata_callback`) — [src/llm_reliability/cost_estimation.py](src/llm_reliability/cost_estimation.py)
 
 ## Bonus: Notebooks
 
