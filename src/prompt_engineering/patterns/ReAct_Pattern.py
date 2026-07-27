@@ -11,7 +11,15 @@ until it has enough information to produce a Final Answer.
 the hood (it keeps calling the model and executing tool calls until the model
 stops requesting tools). This example just makes that loop visible by walking
 the returned message history and labeling each step.
+
+The demo question below is deliberately a *comparison* ("which is bigger, and
+by how much?") rather than a single lookup -- it can't be answered from one
+tool call, so it forces the agent to interleave two web_search calls with a
+calculate call, which is what actually exercises the ReAct loop.
 """
+
+import ast
+import operator
 
 from dotenv import load_dotenv
 from langchain.agents import create_agent
@@ -30,10 +38,40 @@ def web_search(query: str) -> str:
     return "\n".join(r["content"] for r in results.get("results", [])[:3])
 
 
+# ast.BinOp/UnaryOp node types the calculator is willing to evaluate, mapped
+# to the actual operator function. Anything not in this table (names, calls,
+# attribute access, comprehensions, ...) is rejected in _safe_eval below --
+# unlike bare eval(), there's no builtins dict to (mis)configure.
+_OPERATORS = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+    ast.Div: operator.truediv,
+    ast.Pow: operator.pow,
+    ast.USub: operator.neg,
+    ast.UAdd: operator.pos,
+}
+
+
+def _safe_eval(node: ast.AST) -> float:
+    if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+        return node.value
+    if isinstance(node, ast.BinOp) and type(node.op) in _OPERATORS:
+        return _OPERATORS[type(node.op)](_safe_eval(node.left), _safe_eval(node.right))
+    if isinstance(node, ast.UnaryOp) and type(node.op) in _OPERATORS:
+        return _OPERATORS[type(node.op)](_safe_eval(node.operand))
+    raise ValueError(f"Unsupported expression: {ast.dump(node)}")
+
+
 @tool
 def calculate(expression: str) -> float:
-    """Evaluate a basic arithmetic expression, e.g. '1341000000 * 0.01'."""
-    return eval(expression, {"__builtins__": {}}, {})
+    """Evaluate an arithmetic expression, e.g. '(1341000000 - 98000000) / 98000000 * 100'.
+
+    Supports +, -, *, /, ** and parentheses over numeric literals only --
+    no names, function calls, or attribute access -- so it's safe to run
+    directly on model-generated input.
+    """
+    return _safe_eval(ast.parse(expression, mode="eval").body)
 
 
 system_prompt = """
@@ -43,8 +81,9 @@ Final Answer.
 
 Before every tool call, briefly state your Thought (what you need to find
 out next). Use the web_search tool for facts you don't know and the
-calculate tool for arithmetic. Do not guess numbers you can look up or
-compute.
+calculate tool for arithmetic -- never guess a number you can look up or
+compute. When a question compares two things, look each one up separately
+before combining them with calculate.
 """
 
 # provider:model strings understood by create_agent/init_chat_model.
@@ -53,7 +92,7 @@ compute.
 models = {
     "gemini": "google_genai:gemini-2.5-flash",
     "openai": "openai:gpt-5-nano",
-    "claude": "anthropic:claude-opus-4-8",
+    # "claude": "anthropic:claude-opus-4-8",
     "groq": "groq:llama-3.3-70b-versatile",
 }
 
@@ -95,7 +134,10 @@ def run(question: str, model_key: str = "gemini"):
 
 
 if __name__ == "__main__":
-    question = "What is the current population of Japan, and what is 1% of that number?"
+    question = (
+        "Which has the larger population, Japan or Vietnam, and by what "
+        "percentage is it larger than the other?"
+    )
 
     for model_key in models:
         print(f"\n=== {model_key} ({models[model_key]}) ===\n")

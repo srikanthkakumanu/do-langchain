@@ -61,9 +61,9 @@ prompt = ChatPromptTemplate.from_messages(
 # Each provider needs its own API key in .env (GOOGLE_API_KEY, OPENAI_API_KEY,
 # ANTHROPIC_API_KEY, GROQ_API_KEY).
 models = {
-    "gemini": "google_genai:gemini-2.5-flash",
-    "openai": "openai:gpt-5-nano",
-    "claude": "anthropic:claude-opus-4-8",
+    # "gemini": "google_genai:gemini-2.5-flash",
+    # "openai": "openai:gpt-5-nano",
+    # "claude": "anthropic:claude-opus-4-8",
     "groq": "groq:llama-3.3-70b-versatile",
 }
 

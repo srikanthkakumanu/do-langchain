@@ -6,19 +6,14 @@ from utils.llm_utils import load_environment_variables, get_model
 from langchain_core.output_parsers import (
     StrOutputParser,
     JsonOutputParser,
-    PydanticOutputParser,
     SimpleJsonOutputParser,
     CommaSeparatedListOutputParser,
     MarkdownListOutputParser,
     NumberedListOutputParser,
     XMLOutputParser,
-    PydanticToolsParser,
 )
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
-
-
-load_environment_variables()
 
 
 def string_output_parser():
@@ -56,7 +51,7 @@ def json_output_parser():
 
 
 def pydantic_structured_output_parser():
-    """Pydantic output parser for type-safe structured data."""
+    """Native structured output via with_structured_output (recommended in LangChain v1)."""
 
     # Define schema
     class Recipe(BaseModel):
@@ -65,15 +60,12 @@ def pydantic_structured_output_parser():
         prep_time_minutes: int = Field(description="Preparation time in minutes")
         difficulty: str = Field(description="easy, medium, or hard")
 
-    parser = PydanticOutputParser(pydantic_object=Recipe)
-
-    prompt = ChatPromptTemplate.from_template(
-        "Create a simple recipe for: {dish}\n\n{format_instructions}"
-    ).partial(format_instructions=parser.get_format_instructions())
+    prompt = ChatPromptTemplate.from_template("Create a simple recipe for: {dish}")
 
     llm_model = get_model("llama70b")
+    structured_llm = llm_model.with_structured_output(Recipe)
 
-    chain = prompt | llm_model | parser
+    chain = prompt | structured_llm
 
     result = chain.invoke({"dish": "scrambled eggs"})
     print(f"Recipe: {result.name}")
@@ -169,7 +161,7 @@ def xml_output_parser():
 
 
 def pydantic_tools_parser():
-    """PydanticToolsParser converts tool-call responses into Pydantic objects."""
+    """with_structured_output backed by tool-calling, in place of PydanticToolsParser."""
 
     class GetWeather(BaseModel):
         """Get the current weather for a location."""
@@ -177,17 +169,15 @@ def pydantic_tools_parser():
         location: str = Field(description="City and state, e.g. San Francisco, CA")
 
     llm_model = get_model("llama70b")
-    llm_with_tools = llm_model.bind_tools([GetWeather])
+    structured_llm = llm_model.with_structured_output(GetWeather)
 
     prompt = ChatPromptTemplate.from_template("What's the weather like in {city}?")
-    parser = PydanticToolsParser(tools=[GetWeather])
 
-    chain = prompt | llm_with_tools | parser
+    chain = prompt | structured_llm
 
     result = chain.invoke({"city": "Boston"})
     print(f"Result: {result}")
-    if result:
-        print(f"Location: {result[0].location}")
+    print(f"Location: {result.location}")
 
 
 DEMOS = [
@@ -204,6 +194,7 @@ DEMOS = [
 
 
 def main():
+    load_environment_variables()
     for demo in DEMOS:
         print(f"\n=== {demo.__name__} ===")
         demo()
