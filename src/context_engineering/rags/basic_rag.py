@@ -34,7 +34,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.vectorstores import InMemoryVectorStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-SRC_ROOT = Path(__file__).resolve().parents[1]
+SRC_ROOT = Path(__file__).resolve().parents[2]
 if str(SRC_ROOT) not in sys.path:
     sys.path.append(str(SRC_ROOT))
 
@@ -42,11 +42,10 @@ from utils.llm_utils import get_model, load_environment_variables  # noqa: E402
 
 DEFAULT_SOURCE_PATH = (
     Path(__file__).resolve().parents[1]
-    / "context_engineering"
     / "resources"
     / "sample.txt"
 )
-DEFAULT_CHROMA_PATH = Path(__file__).resolve().parents[2] / ".chroma" / "basic_rag"
+DEFAULT_CHROMA_PATH = Path(__file__).resolve().parents[3] / ".chroma" / "basic_rag"
 
 
 class HashingEmbeddings(Embeddings):

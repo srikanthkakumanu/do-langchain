@@ -10,14 +10,14 @@ load -> split -> embed -> store -> retrieve -> augment -> generate
 
 It is called "naive" because it does the direct version of RAG: retrieve the top matching chunks once, put them into the prompt, and generate one answer. There is no query rewriting, reranking, routing, graph traversal, or agent loop yet.
 
-The runnable companion example is [basic_rag.py](../../src/rag/basic_rag.py).
+The runnable companion example is [basic_rag.py](../../src/context_engineering/rags/basic_rag.py).
 
 ## What You Will Build
 
 The example answers a question from a local text file:
 
 - Source document: [sample.txt](../../src/context_engineering/resources/sample.txt)
-- Python example: [basic_rag.py](../../src/rag/basic_rag.py)
+- Python example: [basic_rag.py](../../src/context_engineering/rags/basic_rag.py)
 - Vector store: `InMemoryVectorStore` by default, with an optional Chroma mode
 - Retriever: `vector_store.as_retriever(search_kwargs={"k": 3})`
 - Generator: configured repo LLM using API keys from `.env`, with a deterministic local fallback if the call fails
@@ -41,7 +41,7 @@ The example intentionally uses a tiny local `HashingEmbeddings` class. That keep
 From the repo root:
 
 ```bash
-uv run python src/rag/basic_rag.py
+uv run python src/context_engineering/rags/basic_rag.py
 ```
 
 Expected shape of the output:
@@ -63,21 +63,21 @@ document loaders, retrievers, and agents.
 You can ask a different question without editing the file:
 
 ```bash
-BASIC_RAG_QUESTION="What are document loaders?" uv run python src/rag/basic_rag.py
+BASIC_RAG_QUESTION="What are document loaders?" uv run python src/context_engineering/rags/basic_rag.py
 ```
 
 You can choose any model alias supported by [llm_utils.py](../../src/utils/llm_utils.py):
 
 ```bash
-BASIC_RAG_MODEL=gemini uv run python src/rag/basic_rag.py
-BASIC_RAG_MODEL=openai uv run python src/rag/basic_rag.py
-BASIC_RAG_MODEL=llama70b uv run python src/rag/basic_rag.py
+BASIC_RAG_MODEL=gemini uv run python src/context_engineering/rags/basic_rag.py
+BASIC_RAG_MODEL=openai uv run python src/context_engineering/rags/basic_rag.py
+BASIC_RAG_MODEL=llama70b uv run python src/context_engineering/rags/basic_rag.py
 ```
 
 You can also switch the vector store implementation with an environment variable:
 
 ```bash
-BASIC_RAG_VECTOR_STORE=memory uv run python src/rag/basic_rag.py
+BASIC_RAG_VECTOR_STORE=memory uv run python src/context_engineering/rags/basic_rag.py
 ```
 
 `memory` is the default because it works with the existing project dependencies. Use Chroma only when you want to demonstrate a persistent local vector database.
@@ -184,7 +184,7 @@ uv add langchain-chroma chromadb
 Then run:
 
 ```bash
-BASIC_RAG_VECTOR_STORE=chroma uv run python src/rag/basic_rag.py
+BASIC_RAG_VECTOR_STORE=chroma uv run python src/context_engineering/rags/basic_rag.py
 ```
 
 The example writes the local Chroma collection under:
