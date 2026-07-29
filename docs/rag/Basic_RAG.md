@@ -47,17 +47,78 @@ uv run python src/context_engineering/rags/basic_rag.py
 Expected shape of the output:
 
 ```text
-Loaded documents: 1
-Created chunks: 4
-Retrieved chunks: 3
-
-Retrieved chunk 1:
+==============================================================================
+1. Load
+==============================================================================
+Document 1: chars=598
 Metadata: {...}
 Preview: ...
+
+==============================================================================
+2. Split
+==============================================================================
+Created 4 chunks
+
+==============================================================================
+3. Tokenize and Embed
+==============================================================================
+Question token count: 6
+Question first tokens: ['what', 'building', 'blocks', ...]
+Question token -> vector bucket updates:
+        'building' -> bucket=246 sign=+1
+          'blocks' -> bucket=29  sign=-1
+Question vector summary: dimensions=384, non_zero=6, first_non_zero=[...]
+
+==============================================================================
+4. Store in InMemoryVectorStore
+==============================================================================
+Storage location: Python process memory only
+Stored item 1:
+  id: basic-rag-0-...
+  text: ...
+  metadata: {...}
+  embedding: dimensions=384, non_zero=13, first_non_zero=[...]
+
+==============================================================================
+5. Retrieve from InMemoryVectorStore
+==============================================================================
+Query token -> vector bucket updates:
+...
+Retrieved result 1:
+  similarity/distance score: ...
+  metadata: {...}
+  text: ...
+
+==============================================================================
+6. Augment
+==============================================================================
+Question inserted into prompt: What building blocks does LangChain provide?
+Retrieved documents inserted: 3
+Formatted context characters: 785
+Formatted context preview:
+...
+Prompt message preview:
+...
+
+==============================================================================
+7. Generate
+==============================================================================
+Requested model alias: llama70b
+Generation path: chat model
+Resolved model: llama-3.3-70b-versatile
+Input: augmented prompt messages from step 6
+Generated answer:
+...
 
 Final answer:
 LangChain provides building blocks for prompt templates, chat models, output parsers,
 document loaders, retrievers, and agents.
+```
+
+The detailed trace is on by default because this file is a learning example. Turn it off when you only want the short run summary:
+
+```bash
+BASIC_RAG_VERBOSE=0 uv run python src/context_engineering/rags/basic_rag.py
 ```
 
 You can ask a different question without editing the file:
@@ -129,7 +190,13 @@ Start with a chunk size that fits the shape of your source. For short prose exam
 
 ## Stage 3: Embed
 
-Embedding turns text into vectors.
+Embedding turns text into vectors. This example prints how the demo embedding works:
+
+1. Lowercase the text.
+2. Extract word-like tokens with a regular expression.
+3. Hash each token into one vector bucket.
+4. Add either `+1` or `-1` to that bucket.
+5. Normalize the vector so its length is `1`.
 
 The example creates one embedding model and uses it for both indexing and querying:
 
@@ -148,6 +215,18 @@ class HashingEmbeddings(Embeddings):
 
 This class is only a local learning aid. In a real RAG app, replace it with a semantic embedding model such as OpenAI, Gemini, Voyage, or a local HuggingFace sentence-transformer.
 
+The verbose output shows a compact version of the embedding process:
+
+```text
+Question first tokens: ['what', 'building', 'blocks', 'does', 'langchain', 'provide']
+Question token -> vector bucket updates:
+        'building' -> bucket=246 sign=+1
+          'blocks' -> bucket=29  sign=-1
+Question vector summary: dimensions=384, non_zero=6, first_non_zero=[...]
+```
+
+The full vector has 384 dimensions, so the script prints only the first few non-zero dimensions.
+
 ## Stage 4: Store
 
 The vector store saves chunks and their vectors:
@@ -163,6 +242,20 @@ vector_store = create_vector_store(
 `InMemoryVectorStore` is perfect for learning because there is no database to install. It disappears when the process exits, so it is not the right choice for data that must persist.
 
 ![Basic RAG vector store options](images/basic-rag-vector-store-options.png)
+
+When using the in-memory store, the verbose trace prints:
+
+```text
+4. Store in InMemoryVectorStore
+Storage location: Python process memory only
+Persistence: lost when this script exits
+Stored item 1:
+  id: basic-rag-0-...
+  text: ...
+  metadata: {...}
+  embedding: dimensions=384, non_zero=13, first_non_zero=[...]
+In-memory backing dict keys: [...]
+```
 
 Use a persistent vector store when:
 
@@ -193,6 +286,8 @@ The example writes the local Chroma collection under:
 .chroma/basic_rag
 ```
 
+`.chroma/` is ignored by git because it is generated local database state.
+
 The code path is:
 
 ```python
@@ -220,6 +315,18 @@ The same retriever code works for both stores:
 retriever = vector_store.as_retriever(search_kwargs={"k": 3})
 ```
 
+When using Chroma, the verbose trace prints where the data is persisted and what collection received the records:
+
+```text
+4. Store in Chroma
+Storage location: /path/to/do-langchain/.chroma/basic_rag
+Collection: basic_rag_demo
+Persistence: saved on disk by Chroma
+Stored chunk count: 4
+Chroma collection count: 4
+Chroma sample ids: ['basic-rag-0-...']
+```
+
 ## Stage 5: Retrieve
 
 A retriever wraps the vector store in a chain-friendly interface:
@@ -240,6 +347,28 @@ retrieved_documents = retriever.invoke(question)
 The most useful debugging habit in RAG is to print retrieved chunks before generation. If the answer is not present in those chunks, you have a retrieval problem, not a prompt problem.
 
 ![Basic RAG debug loop](images/basic-rag-debug-loop.png)
+
+The example retrieves two ways:
+
+- `retriever.invoke(question)` for the normal RAG chain input.
+- `vector_store.similarity_search_with_score(question, k=k)` for the learning trace.
+
+The verbose trace prints the query embedding and the ranked retrieved chunks:
+
+```text
+5. Retrieve from InMemoryVectorStore
+Question: What building blocks does LangChain provide?
+Query token -> vector bucket updates:
+...
+Returned documents: 3
+
+Retrieved result 1:
+  similarity/distance score: 0.1543
+  metadata: {...}
+  text: ...
+```
+
+In Chroma mode, the same section says `Retrieve from Chroma`. The score scale can differ by vector store; use it for ranking/debugging within that store, not as a universal quality score.
 
 ## Stage 6: Augment
 
@@ -268,6 +397,24 @@ prompt = ChatPromptTemplate.from_template(
 
 The key instruction is "use only the context." Without that, the model may blend retrieved evidence with training-time memory.
 
+The verbose trace shows exactly what enters the prompt:
+
+```text
+6. Augment
+Question inserted into prompt: What building blocks does LangChain provide?
+Retrieved documents inserted: 3
+Formatted context characters: 785
+
+Formatted context preview:
+[Chunk 1 | source=...] Document loaders are one of these building blocks...
+
+Prompt message preview:
+Message 1 (human):
+You are answering with Basic RAG. Use only the context below...
+```
+
+That section answers: "What did retrieval put into the model's context?"
+
 ## Stage 7: Generate
 
 The example calls the repo's configured chat model. The default is `llama70b`, and you can override it with `BASIC_RAG_MODEL`:
@@ -279,6 +426,28 @@ answer = chain.invoke({"context": context, "question": question})
 ```
 
 Because this repo loads API keys from `.env`, generation will use the real provider as long as the selected model's key is present. If the key is missing or the model call fails, the script falls back to `generate_extractive_fallback()`. That fallback selects relevant sentences from the retrieved chunks. It is not a replacement for an LLM, but it keeps the learning example runnable while still demonstrating the full workflow.
+
+The verbose trace also shows which generation path ran:
+
+```text
+7. Generate
+Requested model alias: llama70b
+Generation path: chat model
+Resolved model: llama-3.3-70b-versatile
+Input: augmented prompt messages from step 6
+
+Generated answer:
+LangChain provides building blocks for prompt templates, chat models, output parsers,
+document loaders, retrievers, and agents.
+```
+
+If the model call fails, the same section says:
+
+```text
+Generation path: extractive fallback
+Fallback reason: ...
+Fallback behavior: rank retrieved sentences by token overlap with the question
+```
 
 ## Read the Whole Flow
 

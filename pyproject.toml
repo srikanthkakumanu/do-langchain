@@ -24,6 +24,8 @@ dependencies = [
     "beautifulsoup4>=4.15.0",
     "langchain-text-splitters>=1.1.2",
     "pydantic>=2.13.4",
+    "langchain-chroma>=1.1.0",
+    "chromadb>=1.5.9",
 ]
 
 [build-system]

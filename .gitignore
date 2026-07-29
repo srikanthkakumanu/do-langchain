@@ -49,3 +49,4 @@ Thumbs.db
 *.log
 *.db
 *.sqlite3
+.chroma/
