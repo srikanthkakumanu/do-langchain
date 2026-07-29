@@ -21,6 +21,7 @@ The closest runnable example in this repo is [runnable_passthrough_context.py](.
 - [What Is RAG](#what-is-rag)
 - [The RAG Pipeline](#the-rag-pipeline)
 - [Types of RAG](#types-of-rag)
+- [Basic RAG Tutorial](Basic_RAG.md)
 - [Vectors and Embeddings](#vectors-and-embeddings)
   - [What is a vector embedding](#what-is-a-vector-embedding)
   - [Similarity metrics](#similarity-metrics)
@@ -133,7 +134,7 @@ Start with naive RAG. Move to advanced patterns only after you can show what is 
 
 | Type | What it adds | Use it when | Production adoption | Cost |
 | --- | --- | --- | --- | --- |
-| Naive RAG | Retrieve top-`k`, then generate | You need a baseline | Very common as the starting architecture; often enough for prototypes and smaller production systems | Lowest |
+| Naive RAG | Retrieve top-`k`, then generate | You need a baseline; see the [Basic RAG tutorial](Basic_RAG.md) | Very common as the starting architecture; often enough for prototypes and smaller production systems | Lowest |
 | Advanced RAG | Query rewrite, re-rank, or compression | The right chunks are often missed or buried | Very common in production; hybrid retrieval, reranking, chunking, vector databases, and evaluation are standard reliability upgrades | Medium |
 | Modular RAG | Routing across retrievers/tools | Knowledge lives in multiple source types | Common in enterprise production systems where apps combine docs, SQL/API data, tools, and permissions | Medium/high |
 | Corrective RAG | Relevance grading plus fallback | Your index can be incomplete or stale | Specialized but practical; usually appears as production guardrails, fallback search, or retrieval quality checks rather than always by the CRAG name | Medium/high |
