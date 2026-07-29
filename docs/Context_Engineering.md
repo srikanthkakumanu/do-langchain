@@ -356,4 +356,4 @@ The cost is duplicated (and re-embedded) text, so overlap shouldn't be excessive
 
 ## Next: Retrieval-Augmented Generation (RAG)
 
-Loading, splitting, and chunking exist to produce good retrieval units — but a chunk sitting in memory isn't useful on its own. The next step is embedding those chunks, indexing them in a vector store, and retrieving the most relevant ones at query time to ground an LLM's answer. See **[docs/RAG.md](RAG.md)** for the embedding, vector store, retriever, and LCEL chain-building stages that pick up where this document leaves off.
+Loading, splitting, and chunking exist to produce good retrieval units — but a chunk sitting in memory isn't useful on its own. The next step is embedding those chunks, indexing them in a vector store, and retrieving the most relevant ones at query time to ground an LLM's answer. See **[docs/rag/RAG.md](rag/RAG.md)** for the embedding, vector store, retriever, and LCEL chain-building stages that pick up where this document leaves off.
