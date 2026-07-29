@@ -67,23 +67,7 @@ Retrieval-Augmented Generation combines two components:
 
 RAG connects them:
 
-```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Inter, ui-sans-serif, system-ui", "primaryColor": "#eef6ff", "primaryBorderColor": "#2563eb", "primaryTextColor": "#172033", "lineColor": "#64748b", "tertiaryColor": "#f8fafc"}}}%%
-flowchart LR
-    Q["User question"]:::input
-    R["Retriever<br/>finds relevant chunks"]:::process
-    C["Retrieved context<br/>source text"]:::data
-    L["LLM<br/>answers from context"]:::model
-    A["Grounded answer"]:::output
-
-    Q --> R --> C --> L --> A
-
-    classDef input fill:#fef3c7,stroke:#d97706,color:#111827,stroke-width:1px;
-    classDef process fill:#e0f2fe,stroke:#0284c7,color:#0f172a,stroke-width:1px;
-    classDef data fill:#ecfdf5,stroke:#059669,color:#0f172a,stroke-width:1px;
-    classDef model fill:#ede9fe,stroke:#7c3aed,color:#111827,stroke-width:1px;
-    classDef output fill:#fce7f3,stroke:#db2777,color:#111827,stroke-width:1px;
-```
+![RAG at a glance](images/rag-overview.png)
 
 Without RAG, the model answers from training-time recall. With RAG, the model receives fresh context inside the prompt and can answer from that evidence.
 
@@ -123,39 +107,7 @@ RAG has two halves:
 - **Indexing** happens offline when documents are added or changed.
 - **Querying** happens online for every user question.
 
-```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Inter, ui-sans-serif, system-ui", "primaryColor": "#eef2ff", "primaryBorderColor": "#4f46e5", "primaryTextColor": "#111827", "lineColor": "#64748b", "clusterBkg": "#f8fafc", "clusterBorder": "#cbd5e1"}}}%%
-flowchart TB
-    subgraph OFF["Offline indexing: run when source data changes"]
-        direction LR
-        S1["Raw sources<br/>PDFs, docs, web pages"]:::source
-        S2["Load<br/>Document loaders"]:::step
-        S3["Split<br/>chunks + metadata"]:::step
-        S4["Embed chunks<br/>numeric vectors"]:::step
-        S5[("Vector store<br/>vectors + text + metadata")]:::store
-        S1 --> S2 --> S3 --> S4 --> S5
-    end
-
-    subgraph ON["Online querying: run for each request"]
-        direction LR
-        Q1["User question"]:::question
-        Q2["Embed query<br/>same model"]:::step
-        Q3["Retrieve<br/>top matching chunks"]:::step
-        Q4["Augment prompt<br/>context + question"]:::step
-        Q5["Generate<br/>LLM answer"]:::model
-        Q6["Final answer"]:::answer
-        Q1 --> Q2 --> Q3 --> Q4 --> Q5 --> Q6
-    end
-
-    S5 -.->|"nearest-neighbor search"| Q3
-
-    classDef source fill:#fff7ed,stroke:#ea580c,color:#111827,stroke-width:1px;
-    classDef step fill:#e0f2fe,stroke:#0284c7,color:#0f172a,stroke-width:1px;
-    classDef store fill:#ecfdf5,stroke:#059669,color:#0f172a,stroke-width:1px;
-    classDef question fill:#fef3c7,stroke:#d97706,color:#111827,stroke-width:1px;
-    classDef model fill:#ede9fe,stroke:#7c3aed,color:#111827,stroke-width:1px;
-    classDef answer fill:#fce7f3,stroke:#db2777,color:#111827,stroke-width:1px;
-```
+![The RAG indexing and querying pipeline](images/rag-pipeline.png)
 
 Step by step:
 
@@ -177,56 +129,18 @@ If you can explain why indexing is not repeated on every question, you understan
 
 Start with naive RAG. Move to advanced patterns only after you can show what is failing.
 
-```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Inter, ui-sans-serif, system-ui", "primaryColor": "#f8fafc", "primaryBorderColor": "#64748b", "primaryTextColor": "#111827", "lineColor": "#64748b", "clusterBkg": "#ffffff", "clusterBorder": "#cbd5e1"}}}%%
-flowchart TB
-    subgraph N["1. Naive RAG: easiest baseline"]
-        direction LR
-        NQ["Query"]:::question --> NR["Retrieve"]:::step --> NG["Generate"]:::model --> NA["Answer"]:::answer
-    end
+![RAG architecture patterns](images/rag-types.png)
 
-    subgraph ADV["2. Advanced RAG: improve retrieval quality"]
-        direction LR
-        AQ["Query"]:::question --> AW["Rewrite or expand"]:::step --> AR["Retrieve"]:::step --> AC["Re-rank or compress"]:::step --> AG["Generate"]:::model --> AA["Answer"]:::answer
-    end
-
-    subgraph MOD["3. Modular RAG: route across sources"]
-        direction LR
-        MQ["Query"]:::question --> ROUTE{"Choose source"}:::decision
-        ROUTE --> V["Vector store"]:::store
-        ROUTE --> SQL["SQL/API/tool"]:::tool
-        V --> MG["Generate"]:::model
-        SQL --> MG
-        MG --> MA["Answer"]:::answer
-    end
-
-    subgraph AGENT["4. Agentic RAG: iterative retrieval"]
-        direction LR
-        GQ["Query"]:::question --> DECIDE{"Need more evidence?"}:::decision
-        DECIDE -- "yes" --> TOOL["Retrieve or call tool"]:::tool
-        TOOL --> DECIDE
-        DECIDE -- "no" --> GG["Generate"]:::model --> GA["Answer"]:::answer
-    end
-
-    classDef question fill:#fef3c7,stroke:#d97706,color:#111827,stroke-width:1px;
-    classDef step fill:#e0f2fe,stroke:#0284c7,color:#0f172a,stroke-width:1px;
-    classDef model fill:#ede9fe,stroke:#7c3aed,color:#111827,stroke-width:1px;
-    classDef answer fill:#fce7f3,stroke:#db2777,color:#111827,stroke-width:1px;
-    classDef decision fill:#fff1f2,stroke:#e11d48,color:#111827,stroke-width:1px;
-    classDef store fill:#ecfdf5,stroke:#059669,color:#0f172a,stroke-width:1px;
-    classDef tool fill:#f1f5f9,stroke:#475569,color:#111827,stroke-width:1px;
-```
-
-| Type | What it adds | Use it when | Cost |
-| --- | --- | --- | --- |
-| Naive RAG | Retrieve top-`k`, then generate | You need a baseline | Lowest |
-| Advanced RAG | Query rewrite, re-rank, or compression | The right chunks are often missed or buried | Medium |
-| Modular RAG | Routing across retrievers/tools | Knowledge lives in multiple source types | Medium/high |
-| Corrective RAG | Relevance grading plus fallback | Your index can be incomplete or stale | Medium/high |
-| Self-RAG | Decide whether retrieval is needed, then critique evidence | Some questions need retrieval and others do not | High |
-| HyDE | Generate a hypothetical answer, then embed that | User questions are short or vague | Medium |
-| Graph RAG | Retrieve through entities and relationships | Multi-hop relationship questions are common | High build cost |
-| Agentic RAG | Iterative retrieve/evaluate loop | The system must decide what to search next | Highest |
+| Type | What it adds | Use it when | Production adoption | Cost |
+| --- | --- | --- | --- | --- |
+| Naive RAG | Retrieve top-`k`, then generate | You need a baseline | Very common as the starting architecture; often enough for prototypes and smaller production systems | Lowest |
+| Advanced RAG | Query rewrite, re-rank, or compression | The right chunks are often missed or buried | Very common in production; hybrid retrieval, reranking, chunking, vector databases, and evaluation are standard reliability upgrades | Medium |
+| Modular RAG | Routing across retrievers/tools | Knowledge lives in multiple source types | Common in enterprise production systems where apps combine docs, SQL/API data, tools, and permissions | Medium/high |
+| Corrective RAG | Relevance grading plus fallback | Your index can be incomplete or stale | Specialized but practical; usually appears as production guardrails, fallback search, or retrieval quality checks rather than always by the CRAG name | Medium/high |
+| Self-RAG | Decide whether retrieval is needed, then critique evidence | Some questions need retrieval and others do not | Emerging/specialized; more often implemented as evaluation, guardrails, or agentic review than as a standalone architecture | High |
+| HyDE | Generate a hypothetical answer, then embed that | User questions are short or vague | Useful niche technique; often folded into broader query reformulation or retrieval optimization work | Medium |
+| Graph RAG | Retrieve through entities and relationships | Multi-hop relationship questions are common | Growing but domain-specific; strongest signal in knowledge-graph-heavy enterprise, research, compliance, and connected-data systems | High build cost |
+| Agentic RAG | Iterative retrieve/evaluate loop | The system must decide what to search next | Rapidly growing for multi-step workflows; useful when retrieval must be planned, repeated, or combined with tools | Highest |
 
 **How to choose**
 
@@ -250,23 +164,7 @@ An embedding model maps text to a fixed-length list of numbers:
 
 Texts with similar meaning should land near each other in vector space. Real embeddings have hundreds or thousands of dimensions, but a two-dimensional picture is useful for intuition:
 
-```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Inter, ui-sans-serif, system-ui", "quadrant1Fill": "#ecfdf5", "quadrant2Fill": "#eff6ff", "quadrant3Fill": "#f8fafc", "quadrant4Fill": "#fff7ed", "quadrant1TextFill": "#065f46", "quadrant2TextFill": "#1d4ed8", "quadrant3TextFill": "#334155", "quadrant4TextFill": "#9a3412"}}}%%
-quadrantChart
-    title Conceptual Embedding Space
-    x-axis Low animal meaning --> High animal meaning
-    y-axis Low vehicle meaning --> High vehicle meaning
-    quadrant-1 Animal-like
-    quadrant-2 Mixed
-    quadrant-3 Unrelated
-    quadrant-4 Vehicle-like
-    "cat": [0.86, 0.10]
-    "kitten": [0.82, 0.12]
-    "dog": [0.76, 0.16]
-    "car": [0.12, 0.84]
-    "truck": [0.17, 0.79]
-    "electric vehicle": [0.22, 0.72]
-```
+![Conceptual embedding space](images/embedding-space.png)
 
 The exact axes are not real. The lesson is real: similar meanings cluster.
 
@@ -406,22 +304,7 @@ A vector store saves three things together:
 
 Then it answers: "Which stored vectors are nearest to this query vector?"
 
-```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Inter, ui-sans-serif, system-ui", "primaryColor": "#f8fafc", "primaryBorderColor": "#64748b", "lineColor": "#64748b", "clusterBkg": "#ffffff", "clusterBorder": "#cbd5e1"}}}%%
-flowchart LR
-    D["Document chunk"]:::data --> E["Embedding model"]:::step
-    E --> V["Vector"]:::vector
-    D --> M["Metadata<br/>source, page, section"]:::meta
-    V --> STORE[("Vector store")]:::store
-    M --> STORE
-    STORE --> SEARCH["Nearest-neighbor search"]:::step
-
-    classDef data fill:#fef3c7,stroke:#d97706,color:#111827,stroke-width:1px;
-    classDef step fill:#e0f2fe,stroke:#0284c7,color:#0f172a,stroke-width:1px;
-    classDef vector fill:#ede9fe,stroke:#7c3aed,color:#111827,stroke-width:1px;
-    classDef meta fill:#f1f5f9,stroke:#475569,color:#111827,stroke-width:1px;
-    classDef store fill:#ecfdf5,stroke:#059669,color:#0f172a,stroke-width:1px;
-```
+![What a vector store keeps](images/vector-store.png)
 
 For learning, `InMemoryVectorStore` is enough:
 
@@ -458,29 +341,7 @@ retriever = vector_store.as_retriever(search_kwargs={"k": 4})
 docs = retriever.invoke("What is LCEL?")
 ```
 
-```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Inter, ui-sans-serif, system-ui", "primaryColor": "#eef6ff", "primaryBorderColor": "#2563eb", "lineColor": "#64748b"}}}%%
-flowchart LR
-    Q["Question"]:::question
-    E["Embed query"]:::step
-    C["Fetch candidates<br/>fetch_k"]:::step
-    R{"Retrieval strategy"}:::decision
-    S["Similarity<br/>top k by score"]:::strategy
-    M["MMR<br/>relevant + diverse"]:::strategy
-    F["Optional metadata filter<br/>source/page/type"]:::filter
-    OUT["Returned Documents"]:::answer
-
-    Q --> E --> C --> R
-    R --> S --> F --> OUT
-    R --> M --> F
-
-    classDef question fill:#fef3c7,stroke:#d97706,color:#111827,stroke-width:1px;
-    classDef step fill:#e0f2fe,stroke:#0284c7,color:#0f172a,stroke-width:1px;
-    classDef decision fill:#fff1f2,stroke:#e11d48,color:#111827,stroke-width:1px;
-    classDef strategy fill:#ede9fe,stroke:#7c3aed,color:#111827,stroke-width:1px;
-    classDef filter fill:#f1f5f9,stroke:#475569,color:#111827,stroke-width:1px;
-    classDef answer fill:#ecfdf5,stroke:#059669,color:#0f172a,stroke-width:1px;
-```
+![Retriever strategies](images/retriever-strategies.png)
 
 ### Similarity search
 
@@ -550,28 +411,7 @@ The basic LCEL chain is:
 question -> retriever -> format documents -> prompt -> model -> string output
 ```
 
-```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Inter, ui-sans-serif, system-ui", "actorBkg": "#fef3c7", "actorBorder": "#d97706", "actorTextColor": "#111827", "activationBkgColor": "#e0f2fe", "activationBorderColor": "#0284c7", "sequenceNumberColor": "#64748b", "lineColor": "#64748b", "signalColor": "#334155", "signalTextColor": "#111827"}}}%%
-sequenceDiagram
-    autonumber
-    actor User
-    participant Chain as LCEL RAG chain
-    participant Retriever
-    participant Store as Vector store
-    participant Prompt
-    participant LLM
-
-    User->>Chain: invoke(question)
-    Chain->>Retriever: retrieve(question)
-    Retriever->>Store: search(query vector, k)
-    Store-->>Retriever: matching Documents
-    Retriever-->>Chain: Documents
-    Chain->>Chain: format_docs(Documents)
-    Chain->>Prompt: context + question
-    Prompt->>LLM: grounded messages
-    LLM-->>Chain: answer text
-    Chain-->>User: final answer
-```
+![LCEL RAG chain flow](images/lcel-rag-chain.png)
 
 Runnable shape:
 
@@ -615,36 +455,7 @@ Grounding is not automatic. You must tell the model how to use the retrieved tex
 
 RAG is one way to put useful information into the context window. It sits beside system prompts, tool results, memory, and compaction.
 
-```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Inter, ui-sans-serif, system-ui", "primaryColor": "#f8fafc", "primaryBorderColor": "#64748b", "lineColor": "#64748b"}}}%%
-flowchart TB
-    SP["Static system prompt<br/>stable rules"]:::static
-    RAG["RAG retrieval<br/>indexed knowledge"]:::rag
-    TOOL["Tool result<br/>live or computed data"]:::tool
-    MEM["Memory<br/>saved facts"]:::memory
-    CW[("Context window")]:::window
-    LIMIT{"Getting full?"}:::decision
-    EDIT["Prune or summarize"]:::compact
-    GEN["Generate response"]:::model
-
-    SP --> CW
-    RAG --> CW
-    TOOL --> CW
-    MEM --> CW
-    CW --> LIMIT
-    LIMIT -- "yes" --> EDIT --> CW
-    LIMIT -- "no" --> GEN
-    CW --> GEN
-
-    classDef static fill:#fef3c7,stroke:#d97706,color:#111827,stroke-width:1px;
-    classDef rag fill:#e0f2fe,stroke:#0284c7,color:#0f172a,stroke-width:1px;
-    classDef tool fill:#ecfdf5,stroke:#059669,color:#0f172a,stroke-width:1px;
-    classDef memory fill:#ede9fe,stroke:#7c3aed,color:#111827,stroke-width:1px;
-    classDef window fill:#fff1f2,stroke:#e11d48,color:#111827,stroke-width:1px;
-    classDef decision fill:#f1f5f9,stroke:#475569,color:#111827,stroke-width:1px;
-    classDef compact fill:#ffe4e6,stroke:#be123c,color:#111827,stroke-width:1px;
-    classDef model fill:#fce7f3,stroke:#db2777,color:#111827,stroke-width:1px;
-```
+![Context engineering sources](images/context-engineering-window.png)
 
 ### Static system prompts
 
@@ -671,25 +482,7 @@ For prompt-injection concerns, see [Prompt_Engineering.md - System Prompts & Inj
 
 RAG retrieves from data indexed in advance. Tool-result injection fetches or computes data at request time.
 
-```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Inter, ui-sans-serif, system-ui", "actorBkg": "#fef3c7", "actorBorder": "#d97706", "activationBkgColor": "#ecfdf5", "activationBorderColor": "#059669", "lineColor": "#64748b", "signalColor": "#334155", "signalTextColor": "#111827"}}}%%
-sequenceDiagram
-    autonumber
-    actor User
-    participant Agent as Agent / LLM
-    participant Tool as Tool
-
-    User->>Agent: Ask a question
-    Agent->>Agent: Decide whether live data is needed
-    alt live or computed data needed
-        Agent->>Tool: Call tool with query/input
-        Tool-->>Agent: Return result
-        Agent->>Agent: Add result to context
-    else no tool needed
-        Agent->>Agent: Use existing context
-    end
-    Agent-->>User: Final answer
-```
+![Tool-result injection flow](images/tool-result-injection.png)
 
 | | RAG | Tool-result injection |
 | --- | --- | --- |
@@ -717,32 +510,7 @@ Short-term memory is covered in [Prompt_Engineering.md - Conversation Memory Pat
 
 Long-term memory needs storage outside a single thread. LangGraph's `Store` interface is one way to do this.
 
-```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Inter, ui-sans-serif, system-ui", "primaryColor": "#f8fafc", "primaryBorderColor": "#64748b", "lineColor": "#64748b", "clusterBkg": "#ffffff", "clusterBorder": "#cbd5e1"}}}%%
-flowchart LR
-    subgraph A["Session 1: thread_id=A"]
-        U1["User says:<br/>My name is Priya"]:::question
-        C1["Thread checkpointer<br/>stores messages"]:::thread
-        U1 --> C1
-    end
-
-    STORE[("Cross-thread memory store<br/>namespace: user_id")]:::store
-
-    subgraph B["Session 2: thread_id=B"]
-        U2["User asks:<br/>What is my name?"]:::question
-        C2["New thread<br/>no old messages"]:::thread
-        A2["Agent answers:<br/>Priya"]:::answer
-        U2 --> C2 --> A2
-    end
-
-    C1 -.->|"write selected fact"| STORE
-    STORE -.->|"recall selected fact"| C2
-
-    classDef question fill:#fef3c7,stroke:#d97706,color:#111827,stroke-width:1px;
-    classDef thread fill:#e0f2fe,stroke:#0284c7,color:#0f172a,stroke-width:1px;
-    classDef store fill:#ede9fe,stroke:#7c3aed,color:#111827,stroke-width:1px;
-    classDef answer fill:#ecfdf5,stroke:#059669,color:#0f172a,stroke-width:1px;
-```
+![Short-term and long-term memory flow](images/memory-systems.png)
 
 ```python
 from langgraph.store.memory import InMemoryStore
@@ -791,31 +559,7 @@ Memory guardrails:
 
 Every context source consumes tokens. Compaction decides what to do when the context window gets crowded.
 
-```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Inter, ui-sans-serif, system-ui", "primaryColor": "#f8fafc", "primaryBorderColor": "#64748b", "lineColor": "#64748b"}}}%%
-flowchart LR
-    G["Context grows<br/>messages, chunks, tool results"]:::input
-    T{"Past threshold?"}:::decision
-    C{"Choose strategy"}:::decision
-    P["Prune<br/>drop stale content"]:::prune
-    S["Summarize<br/>compress old content"]:::summary
-    K["Keep<br/>recent/high-signal detail"]:::keep
-    N["Smaller working context"]:::output
-
-    G --> T
-    T -- "no" --> K
-    T -- "yes" --> C
-    C -- "stale / low value" --> P --> N
-    C -- "still useful" --> S --> N
-    K --> N
-
-    classDef input fill:#fef3c7,stroke:#d97706,color:#111827,stroke-width:1px;
-    classDef decision fill:#fff1f2,stroke:#e11d48,color:#111827,stroke-width:1px;
-    classDef prune fill:#fee2e2,stroke:#dc2626,color:#111827,stroke-width:1px;
-    classDef summary fill:#e0f2fe,stroke:#0284c7,color:#0f172a,stroke-width:1px;
-    classDef keep fill:#ecfdf5,stroke:#059669,color:#0f172a,stroke-width:1px;
-    classDef output fill:#ede9fe,stroke:#7c3aed,color:#111827,stroke-width:1px;
-```
+![Compaction and context editing](images/compaction-context-editing.png)
 
 | Strategy | Meaning | Tradeoff |
 | --- | --- | --- |
@@ -853,30 +597,7 @@ Use RAG for knowledge. Use fine-tuning for behavior. Use both when the system ne
 
 Debug RAG in two passes.
 
-```mermaid
-%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Inter, ui-sans-serif, system-ui", "primaryColor": "#f8fafc", "primaryBorderColor": "#64748b", "lineColor": "#64748b"}}}%%
-flowchart TB
-    Q["Test question"]:::question
-    R["Print retrieved chunks"]:::step
-    HAS{"Is the answer<br/>in the chunks?"}:::decision
-    RET["Retrieval failure<br/>fix indexing/retrieval"]:::bad
-    G["Run generation"]:::step
-    OK{"Answer faithful<br/>to chunks?"}:::decision
-    GEN["Generation failure<br/>fix prompt/model/context size"]:::bad
-    PASS["RAG case passes"]:::good
-
-    Q --> R --> HAS
-    HAS -- "no" --> RET
-    HAS -- "yes" --> G --> OK
-    OK -- "no" --> GEN
-    OK -- "yes" --> PASS
-
-    classDef question fill:#fef3c7,stroke:#d97706,color:#111827,stroke-width:1px;
-    classDef step fill:#e0f2fe,stroke:#0284c7,color:#0f172a,stroke-width:1px;
-    classDef decision fill:#fff1f2,stroke:#e11d48,color:#111827,stroke-width:1px;
-    classDef bad fill:#fee2e2,stroke:#dc2626,color:#111827,stroke-width:1px;
-    classDef good fill:#ecfdf5,stroke:#059669,color:#0f172a,stroke-width:1px;
-```
+![Debugging RAG quality](images/rag-evaluation.png)
 
 **Retrieval failure**
 
