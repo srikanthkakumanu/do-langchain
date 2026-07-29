@@ -26,6 +26,8 @@ dependencies = [
     "pydantic>=2.13.4",
     "langchain-chroma>=1.1.0",
     "chromadb>=1.5.9",
+    "pinecone>=7.3.0",
+    "langchain-pinecone>=0.2.13",
 ]
 
 [build-system]
