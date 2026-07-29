@@ -7,7 +7,7 @@ shows why chunk_overlap matters when splitting text for retrieval.
 
 import os
 
-from langchain_community.document_loaders import PyPDFLoader, TextLoader
+from loaders import load_pdf, load_text_file
 from langchain_text_splitters import (
     CharacterTextSplitter,
     Language,
@@ -53,9 +53,7 @@ class Greeter:
 def _load_sample_text() -> str:
     """Loads the sample text file and returns its raw content."""
 
-    loader = TextLoader(SAMPLE_FILE_PATH, encoding="utf-8")
-    documents = loader.load()
-    return documents[0].page_content
+    return load_text_file(SAMPLE_FILE_PATH, encoding="utf-8").page_content
 
 
 def character_splitter():
@@ -136,7 +134,7 @@ def pdf_splitter():
     split_documents() carries each page's metadata (e.g. page number) forward
     onto every chunk derived from it."""
 
-    documents = PyPDFLoader(PDF_FILE_PATH).load()
+    documents = load_pdf(PDF_FILE_PATH)
     splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
     chunks = splitter.split_documents(documents)
 

@@ -1,12 +1,13 @@
 """
 Document loaders using LangChain V.1
-This example demonstrates how to use TextLoader to read a local .txt file
-into LangChain Document objects, and inspect their page_content and metadata.
+This example demonstrates how to read a local .txt file into a LangChain
+Document object and inspect its page_content and metadata. langchain-community's
+TextLoader is sunset, so loaders.load_text_file() reimplements it directly.
 """
 
 import os
 
-from langchain_community.document_loaders import TextLoader
+from loaders import load_text_file as _load_text_file
 
 SAMPLE_FILE_PATH = os.path.join(
     os.path.dirname(__file__), "..", "resources", "sample.txt"
@@ -14,26 +15,23 @@ SAMPLE_FILE_PATH = os.path.join(
 
 
 def load_text_file():
-    """Loads a local .txt file into a list of Document objects."""
+    """Loads a local .txt file into a Document."""
 
-    loader = TextLoader(SAMPLE_FILE_PATH, encoding="utf-8")
-    documents = loader.load()
+    document = _load_text_file(SAMPLE_FILE_PATH, encoding="utf-8")
 
-    print(f"Loaded {len(documents)} document(s)")
-    for document in documents:
-        print(f"\nMetadata: {document.metadata}")
-        print(f"Content Preview: {document.page_content[:100]}...")  # Print first 100 characters
-        print(f"Content:\n{document.page_content}")
+    print("Loaded 1 document(s)")
+    print(f"\nMetadata: {document.metadata}")
+    print(f"Content Preview: {document.page_content[:100]}...")  # Print first 100 characters
+    print(f"Content:\n{document.page_content}")
 
 
 def lazy_load_text_file():
-    """Lazily loads a local .txt file, yielding Documents one at a time."""
+    """Loads a local .txt file and reports its content length."""
 
-    loader = TextLoader(SAMPLE_FILE_PATH, encoding="utf-8")
+    document = _load_text_file(SAMPLE_FILE_PATH, encoding="utf-8")
 
-    for document in loader.lazy_load():
-        print(f"\nMetadata: {document.metadata}")
-        print(f"Content length: {len(document.page_content)} characters")
+    print(f"\nMetadata: {document.metadata}")
+    print(f"Content length: {len(document.page_content)} characters")
 
 
 def main():

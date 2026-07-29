@@ -1,17 +1,19 @@
 # Context Engineering
 
-A hands-on tutorial on **context engineering**: getting the right external data — a file, a web page, a PDF — into an LLM's limited context window as clean, well-sized, retrievable pieces. It walks the full pipeline in order: **loading** raw sources into LangChain `Document` objects, **splitting** those documents into chunks with a text splitter, and **chunking** strategy — comparing splitters, tuning `chunk_size`, and using `chunk_overlap` — to produce chunks that are actually good retrieval units. Examples are runnable from [Document_Loaders.py](../src/context_engineering/loaders_chunking/Document_Loaders.py), [TextLoader.py](../src/context_engineering/loaders_chunking/TextLoader.py), [WebLoader.py](../src/context_engineering/loaders_chunking/WebLoader.py), and [chunking_splitters.py](../src/context_engineering/loaders_chunking/chunking_splitters.py), all using **LangChain 1.3** (`langchain-community` 0.4, `langchain-text-splitters` 1.1, current as of this writing).
+A hands-on tutorial on **context engineering**: getting the right external data — a file, a web page, a PDF — into an LLM's limited context window as clean, well-sized, retrievable pieces. It walks the full pipeline in order: **loading** raw sources into LangChain `Document` objects, **splitting** those documents into chunks with a text splitter, and **chunking** strategy — comparing splitters, tuning `chunk_size`, and using `chunk_overlap` — to produce chunks that are actually good retrieval units. Examples are runnable from [Document_Loaders.py](../src/context_engineering/loaders_chunking/Document_Loaders.py), [TextLoader.py](../src/context_engineering/loaders_chunking/TextLoader.py), [WebLoader.py](../src/context_engineering/loaders_chunking/WebLoader.py), and [chunking_splitters.py](../src/context_engineering/loaders_chunking/chunking_splitters.py), all using **LangChain 1.3** (`langchain-text-splitters` 1.1, current as of this writing).
+
+> `langchain-community` — the package that used to provide `TextLoader`, `WebBaseLoader`, `DirectoryLoader`, and `PyPDFLoader` — was sunset and archived in June 2026, with no dedicated partner package replacing these thin, single-purpose loaders. The loading examples below reimplement them directly on top of the libraries they always wrapped internally (the standard library, `pypdf`, `requests`, and `BeautifulSoup`), in [loaders.py](../src/context_engineering/loaders_chunking/loaders.py). Behavior and `Document` output are unchanged.
 
 ## Table of Contents
 
 - [What Is Context Engineering](#what-is-context-engineering)
 - [Document Loaders](#document-loaders)
-  - [`TextLoader`](#textloader)
-  - [`WebBaseLoader`](#webbaseloader)
-  - [`DirectoryLoader`](#directoryloader)
-  - [`PyPDFLoader`](#pypdfloader)
+  - [Loading a text file](#loading-a-text-file)
+  - [Loading a web page](#loading-a-web-page)
+  - [Loading a directory](#loading-a-directory)
+  - [Loading a PDF](#loading-a-pdf)
   - [`Document`](#document)
-  - [`load()` vs `lazy_load()`](#load-vs-lazy_load)
+  - [Eager vs. lazy loading](#eager-vs-lazy-loading)
   - [Choosing a Loader](#choosing-a-loader)
 - [Text Splitters](#text-splitters)
   - [`CharacterTextSplitter`](#charactertextsplitter)
@@ -49,81 +51,74 @@ The rest of this tutorial covers each stage in turn.
 Document loaders read data from a source (a file, a directory, a web page, a PDF, ...) and convert it into LangChain `Document` objects — the common unit that prompts, splitters, and vector stores all understand.
 
 ```python
-loader = TextLoader(path)
-documents = loader.load()
+document = load_text_file(path)
 ```
 
-Every loader exposes the same two entry points:
+[loaders.py](../src/context_engineering/loaders_chunking/loaders.py) mirrors the two entry points the old `langchain-community` loader classes exposed:
 
-- `load()` — reads the whole source and returns a `list[Document]`.
-- `lazy_load()` — returns an iterator/generator of `Document`, yielding one at a time instead of holding everything in memory.
+- an eager function that reads the whole source and returns `Document`(s).
+- `iter_directory()` — a generator that yields one `Document` at a time instead of holding everything in memory (the `lazy_load()` equivalent).
 
-| Loader                          | Reads                          | Output                                 | Use when                                                 |
+| Function                        | Reads                          | Output                                 | Use when                                                 |
 | -------------------------------- | ------------------------------- | ---------------------------------------- | ---------------------------------------------------------- |
-| `TextLoader`                    | A single local text file        | One `Document`                         | You have plain text/markdown on disk.                    |
-| `WebBaseLoader`                 | One or more URLs                | One `Document` per URL                 | You need the text content of a web page.                 |
-| `DirectoryLoader`               | A folder of files               | One `Document` per matching file       | You want to load many files with the same loader class.  |
-| `PyPDFLoader`                   | A local PDF file                | One `Document` per page                | You need per-page text and metadata from a PDF.          |
+| `load_text_file()`              | A single local text file        | One `Document`                         | You have plain text/markdown on disk.                    |
+| `load_web_page()`               | One URL                        | One `Document`                         | You need the text content of a web page.                 |
+| `iter_directory()`              | A folder of files               | One `Document` per matching file (generator) | You want to load many files the same way.           |
+| `load_pdf()`                    | A local PDF file                | One `Document` per page                | You need per-page text and metadata from a PDF.          |
 | `Document`                      | (not a loader) in-memory data   | A single `Document`                    | You are constructing documents manually, e.g. in tests.  |
 
-### `TextLoader`
+### Loading a text file
 
 Reads a single local text file into one `Document`. `page_content` holds the raw file text and `metadata["source"]` holds the file path.
 
 ```python
-from langchain_community.document_loaders import TextLoader
+from loaders import load_text_file
 
-loader = TextLoader(SAMPLE_FILE_PATH, encoding="utf-8")
-documents = loader.load()
+document = load_text_file(SAMPLE_FILE_PATH, encoding="utf-8")
 
-print(documents[0].page_content[:100])
-print(documents[0].metadata)  # {'source': '.../sample.txt'}
+print(document.page_content[:100])
+print(document.metadata)  # {'source': '.../sample.txt'}
 ```
 
-Use `loader.lazy_load()` instead of `load()` when you only need to stream through the content rather than hold the whole `list[Document]` in memory.
+Internally it's `open(path, encoding=encoding).read()` wrapped in a `Document` — exactly what `langchain-community`'s `TextLoader` did.
 
-### `WebBaseLoader`
+### Loading a web page
 
-Fetches one or more URLs with `requests` and parses the HTML with BeautifulSoup, returning the extracted page text as one `Document` per URL.
+Fetches a URL with `requests` and parses the HTML with BeautifulSoup, returning the extracted page text as one `Document`.
 
 ```python
-from langchain_community.document_loaders import WebBaseLoader
+from loaders import load_web_page
 
-loader = WebBaseLoader("https://python.langchain.com/docs/concepts/document_loaders/")
-# or: WebBaseLoader(web_path=["https://url-1", "https://url-2"])
-documents = loader.load()
+document = load_web_page("https://python.langchain.com/docs/concepts/document_loaders/")
 
-print(documents[0].metadata["source"])
-print(documents[0].page_content[:200])
+print(document.metadata["source"])
+print(document.page_content[:200])
 ```
 
-Set the `USER_AGENT` environment variable before creating the loader (e.g. `os.environ.setdefault("USER_AGENT", "my-app/1.0")`) — some sites are picky about requests with no user agent, and LangChain otherwise prints a warning.
+Set the `USER_AGENT` environment variable before fetching (e.g. `os.environ.setdefault("USER_AGENT", "my-app/1.0")`) — some sites are picky about requests with no user agent.
 
-### `DirectoryLoader`
+### Loading a directory
 
-Walks a directory, matches files against a glob pattern, and loads each one with a given loader class (`loader_cls`), combining every file's `Document`(s) into a single collection.
+Walks a directory, matches files against a glob pattern, and lazily loads each one, yielding each file's `Document` in turn.
 
 ```python
-from langchain_community.document_loaders import DirectoryLoader, TextLoader
+from loaders import iter_directory
 
-loader = DirectoryLoader(tmpdir, glob="*.txt", loader_cls=TextLoader)
-
-for doc in loader.lazy_load():
+for doc in iter_directory(tmpdir, glob="*.txt"):
     print(doc.page_content[:50])
     print(doc.metadata["source"])
 ```
 
-`lazy_load()` is especially useful here since it loads and yields one file at a time instead of reading the entire directory into memory up front.
+Generator-based, so it loads and yields one file at a time instead of reading the entire directory into memory up front — the same behavior `DirectoryLoader.lazy_load()` gave you.
 
-### `PyPDFLoader`
+### Loading a PDF
 
-Loads a PDF and returns one `Document` per page, with page-level metadata (`page`, `page_label`, `total_pages`, plus PDF metadata like `producer`/`creationdate`). It's backed by `pypdf` (v6 as of this writing) under the hood.
+Loads a PDF and returns one `Document` per page, with page-level metadata (`page`, `total_pages`, `source`). It's backed directly by `pypdf` (v6 as of this writing) — the same library `langchain-community`'s `PyPDFLoader` used under the hood.
 
 ```python
-from langchain_community.document_loaders import PyPDFLoader
+from loaders import load_pdf
 
-loader = PyPDFLoader(pdf_path)
-documents = loader.load()
+documents = load_pdf(pdf_path)
 
 for doc in documents:
     print(doc.metadata["page"], doc.page_content[:100])
@@ -147,17 +142,17 @@ print(doc.page_content)
 print(doc.metadata)
 ```
 
-### `load()` vs `lazy_load()`
+### Eager vs. lazy loading
 
-- `load()` reads everything up front and returns a `list[Document]`. Simple, but holds all content in memory at once.
-- `lazy_load()` returns an iterator that reads and yields one `Document` at a time. Prefer it for large directories, large PDFs, or any source where you don't need every document in memory simultaneously.
+- Eager functions (`load_text_file()`, `load_pdf()`, `load_web_page()`) read everything up front and return `Document`(s) directly. Simple, but holds all content in memory at once.
+- `iter_directory()` is a generator that reads and yields one `Document` at a time. Prefer this pattern for large directories, large PDFs, or any source where you don't need every document in memory simultaneously.
 
 ### Choosing a Loader
 
-- Use `TextLoader` for a single local text/markdown file.
-- Use `WebBaseLoader` for HTML pages you want as plain text.
-- Use `DirectoryLoader` to apply one loader class across many files in a folder.
-- Use `PyPDFLoader` for PDFs, especially when you need per-page metadata.
+- Use `load_text_file()` for a single local text/markdown file.
+- Use `load_web_page()` for HTML pages you want as plain text.
+- Use `iter_directory()` to apply the same loading logic across many files in a folder.
+- Use `load_pdf()` for PDFs, especially when you need per-page metadata.
 - Construct `Document` directly when content isn't coming from an external source at all.
 
 ## Text Splitters
@@ -253,10 +248,10 @@ chunks = splitter.split_text(source_code)
 
 ### Splitting PDFs and other `Document`s
 
-`PyPDFLoader` returns one `Document` per page. Passing those documents through `split_documents()` (instead of `split_text()`) chunks the text while carrying each source document's `metadata` (page number, source path, ...) forward onto every chunk derived from it.
+`load_pdf()` returns one `Document` per page. Passing those documents through `split_documents()` (instead of `split_text()`) chunks the text while carrying each source document's `metadata` (page number, source path, ...) forward onto every chunk derived from it.
 
 ```python
-documents = PyPDFLoader(pdf_path).load()
+documents = load_pdf(pdf_path)
 chunks = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50).split_documents(documents)
 
 print(chunks[0].metadata)  # {'page': 0, 'source': '...', ...}
@@ -269,7 +264,7 @@ print(chunks[0].metadata)  # {'page': 0, 'source': '...', ...}
 - Use `TokenTextSplitter` when chunk size needs to match the model's token-based context window, not character count.
 - Use `MarkdownHeaderTextSplitter` when section/header structure should live in metadata rather than be repeated in every chunk.
 - Use `RecursiveCharacterTextSplitter.from_language` for source code, so chunks respect function/class boundaries.
-- Use `split_documents()` instead of `split_text()` whenever you're chunking `Document`s (e.g. from `PyPDFLoader`) and want to keep their metadata.
+- Use `split_documents()` instead of `split_text()` whenever you're chunking `Document`s (e.g. from `load_pdf()`) and want to keep their metadata.
 - Always set a non-zero `chunk_overlap` for retrieval use cases — it's cheap insurance against losing context at chunk boundaries.
 
 ## Chunking: Strategy, Size, and Overlap

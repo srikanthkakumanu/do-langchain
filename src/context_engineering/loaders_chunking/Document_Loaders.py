@@ -2,8 +2,10 @@
 Document loaders using LangChain V.1
 
 Covers what TextLoader.py and WebLoader.py don't: the Document object's
-structure, lazily loading a whole directory of files with DirectoryLoader,
-and loading a multi-page PDF with PyPDFLoader.
+structure, lazily loading a whole directory of files, and loading a
+multi-page PDF. langchain-community's DirectoryLoader and PyPDFLoader are
+sunset, so loaders.iter_directory() and loaders.load_pdf() reimplement them
+directly.
 """
 
 import os
@@ -11,11 +13,7 @@ import tempfile
 from pathlib import Path
 
 from langchain_core.documents import Document
-from langchain_community.document_loaders import (
-    DirectoryLoader,
-    PyPDFLoader,
-    TextLoader,
-)
+from loaders import iter_directory, load_pdf
 
 PDF_FILE_PATH = os.path.join(
     os.path.dirname(__file__), "..", "resources", "langchain_demo.pdf"
@@ -50,10 +48,8 @@ def lazy_directory_loader():
             path = Path(tmpdir) / f"doc_{i}.txt"
             path.write_text(f"This is document {i}. It contains sample content.")
 
-        loader = DirectoryLoader(tmpdir, glob="*.txt", loader_cls=TextLoader)
-
         print(f"Initialized lazy loader for directory: {tmpdir}")
-        for doc in loader.lazy_load():
+        for doc in iter_directory(tmpdir, glob="*.txt"):
             print(f"Content preview: {doc.page_content[:50]}...")
             print(f"Metadata: {doc.metadata}")
 
@@ -61,8 +57,7 @@ def lazy_directory_loader():
 def pdf_loader():
     """Loads a multi-page PDF, one Document per page."""
 
-    loader = PyPDFLoader(PDF_FILE_PATH)
-    documents = loader.load()
+    documents = load_pdf(PDF_FILE_PATH)
 
     print(f"Loaded {len(documents)} document(s) from PDF")
     for i, doc in enumerate(documents):
