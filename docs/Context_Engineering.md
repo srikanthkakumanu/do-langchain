@@ -27,6 +27,7 @@ A hands-on tutorial on **context engineering**: getting the right external data 
   - [Comparing splitter strategies](#comparing-splitter-strategies)
   - [Comparing chunk sizes](#comparing-chunk-sizes)
   - [Why `chunk_overlap` matters](#why-chunk_overlap-matters)
+- [Next: Retrieval-Augmented Generation (RAG)](#next-retrieval-augmented-generation-rag)
 
 ## What Is Context Engineering
 
@@ -352,3 +353,7 @@ Chunk 2: 'models (LLMs). It provides building blocks for prompt templates, ...'
 Shared words between the two: `{'models', '(LLMs).', 'It', 'provides', 'building'}`. Either chunk retrieved on its own still carries that connecting phrase.
 
 The cost is duplicated (and re-embedded) text, so overlap shouldn't be excessive — a common starting point is 10-20% of `chunk_size`. But for anything used in retrieval, some non-zero overlap is nearly always worth that cost.
+
+## Next: Retrieval-Augmented Generation (RAG)
+
+Loading, splitting, and chunking exist to produce good retrieval units — but a chunk sitting in memory isn't useful on its own. The next step is embedding those chunks, indexing them in a vector store, and retrieving the most relevant ones at query time to ground an LLM's answer. See **[docs/RAG.md](RAG.md)** for the embedding, vector store, retriever, and LCEL chain-building stages that pick up where this document leaves off.

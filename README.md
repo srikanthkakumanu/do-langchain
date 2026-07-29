@@ -26,6 +26,7 @@ Explore the LangChain, LangGraph, and LangChain Protocol Python packages.
 - [docs/Prompt_Engineering.md](docs/Prompt_Engineering.md) — Prompt anatomy, core prompting techniques (zero-shot, few-shot, role, structured output, etc.), and the agentic **Patterns** built from them (ReAct, Chain-of-Thought, Self-Consistency, Tree-of-Thought, injection-resistant system prompts, conversation memory), with a side-by-side comparison table.
 - [docs/LCEL.md](docs/LCEL.md) — LangChain Expression Language: composing chains with the `|` operator, `Runnable` primitives (`RunnableLambda`, `RunnableParallel`, `RunnableBranch`, `RunnablePassthrough`), and common composition patterns.
 - [docs/Context_Engineering.md](docs/Context_Engineering.md) — Getting external data into a model's context: document loaders (`TextLoader`, `WebBaseLoader`, `DirectoryLoader`, `PyPDFLoader`), text splitters (`CharacterTextSplitter`, `RecursiveCharacterTextSplitter`, `TokenTextSplitter`, `MarkdownHeaderTextSplitter`, language-aware splitting), and chunking strategy (`chunk_size`/`chunk_overlap` tuning) to produce good retrieval chunks.
+- [docs/RAG.md](docs/RAG.md) — Retrieval-Augmented Generation: embedding chunks, indexing them in a vector store, retrieval strategies (similarity search, MMR, metadata filtering), building a retrieval-augmented LCEL chain, RAG vs. fine-tuning, and diagnosing retrieval vs. generation failures.
 - [docs/LLM_Reliability_Cost.md](docs/LLM_Reliability_Cost.md) — Making LLM calls production-ready across OpenAI, Groq, Gemini, and Claude: retries and exponential backoff, client-side rate limiting (`InMemoryRateLimiter`), token counting (pre-call estimates vs. `usage_metadata`), and cost estimation, including the per-provider gotchas (Gemini's collapsed exception type, Groq's missing tokenizer) you hit in practice.
 
 ## Learning Path
@@ -80,6 +81,8 @@ Get external data (files, web pages, PDFs) into a model's context before you nee
 15. **Loading a web page** — [src/context_engineering/loaders_chunking/WebLoader.py](src/context_engineering/loaders_chunking/WebLoader.py)
 16. **The `Document` object, `DirectoryLoader`, and `PyPDFLoader`** — [src/context_engineering/loaders_chunking/Document_Loaders.py](src/context_engineering/loaders_chunking/Document_Loaders.py)
 17. **Splitters and chunking strategy** (`chunk_size`/`chunk_overlap`) — [src/context_engineering/loaders_chunking/chunking_splitters.py](src/context_engineering/loaders_chunking/chunking_splitters.py)
+
+Once chunks exist, the next question is how to embed, index, and retrieve them at query time to ground an LLM's answer — see **[docs/RAG.md](docs/RAG.md)**. The retrieval-augmentation chain shape it builds on is previewed with a stub retriever in step 7 above ([runnable_passthrough_context.py](src/context_engineering/runnable_passthrough_context.py)).
 
 ### 7. Agents & Tools
 
