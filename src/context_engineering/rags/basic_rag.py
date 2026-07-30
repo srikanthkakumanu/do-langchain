@@ -257,6 +257,38 @@ def retrieve_documents_with_scores(vector_store, question: str, *, k: int = 3):
     return [(document, None) for document in vector_store.similarity_search(question, k=k)]
 
 
+def retrieve(
+    vector_store,
+    embeddings: Embeddings,
+    question: str,
+    *,
+    k: int = 3,
+    store_type: str = "memory",
+    verbose: bool = True,
+) -> dict[str, object]:
+    """Run the Retrieve stage of RAG (the "R" in the acronym).
+
+    Turns the vector store into a retriever and fetches the most relevant
+    chunks for the question, calling create_retriever, retrieve_documents,
+    and retrieve_documents_with_scores under one entry point so callers can
+    reason about the pipeline as Retrieve -> Augment -> Generate.
+    """
+
+    retriever = create_retriever(vector_store, k=k)
+    retrieved_documents = retrieve_documents(retriever, question)
+
+    scored_documents = None
+    if verbose:
+        scored_documents = retrieve_documents_with_scores(vector_store, question, k=k)
+        print_retrieval_debug(store_type, question, embeddings, scored_documents)
+
+    return {
+        "retriever": retriever,
+        "retrieved_documents": retrieved_documents,
+        "scored_documents": scored_documents,
+    }
+
+
 def format_documents(documents: list[Document]) -> str:
     """Format retrieved chunks into the context string inserted into the prompt."""
 
@@ -369,12 +401,16 @@ def basic_rag(
         store_type=store_type,
         verbose=verbose,
     )
-    retriever = create_retriever(vector_store, k=k)
-    retrieved_documents = retrieve_documents(retriever, question)
 
-    if verbose:
-        scored_documents = retrieve_documents_with_scores(vector_store, question, k=k)
-        print_retrieval_debug(store_type, question, embeddings, scored_documents)
+    retrieval = retrieve(
+        vector_store,
+        embeddings,
+        question,
+        k=k,
+        store_type=store_type,
+        verbose=verbose,
+    )
+    retrieved_documents = retrieval["retrieved_documents"]
 
     if verbose:
         print_augmentation_debug(question, retrieved_documents)

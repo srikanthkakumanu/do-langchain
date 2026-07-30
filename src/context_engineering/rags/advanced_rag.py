@@ -325,6 +325,50 @@ def rerank_documents(
     return [document for *_scores, document in reranked[:keep]]
 
 
+def retrieve(
+    vector_store,
+    question: str,
+    *,
+    model_name: str,
+    k: int = 4,
+    keep: int = 3,
+    metadata_filter: dict[str, Any] | None = None,
+    verbose: bool = True,
+) -> dict[str, Any]:
+    """Run the Retrieve stage of Advanced RAG (the "R" in the acronym).
+
+    Advanced RAG expands plain retrieval with a pre-retrieval query rewrite
+    and a post-retrieval rerank, so this wraps rewrite_query,
+    retrieve_documents, and rerank_documents under one entry point instead
+    of leaving all three steps inline in advanced_rag(). Callers still get
+    Retrieve -> Augment -> Generate as the top-level shape.
+    """
+
+    rewritten_query = rewrite_query(question, model_name=model_name, verbose=verbose)
+    scored_documents = retrieve_documents(
+        vector_store,
+        rewritten_query,
+        k=k,
+        metadata_filter=metadata_filter,
+    )
+
+    if verbose:
+        print_retrieval_debug(rewritten_query, scored_documents, metadata_filter)
+
+    reranked_documents = rerank_documents(
+        question,
+        scored_documents,
+        keep=keep,
+        verbose=verbose,
+    )
+
+    return {
+        "rewritten_query": rewritten_query,
+        "scored_documents": scored_documents,
+        "reranked_documents": reranked_documents,
+    }
+
+
 def format_documents(documents: list[Document]) -> str:
     """Format reranked documents as compact prompt context."""
 
@@ -414,27 +458,20 @@ def advanced_rag(
         verbose=verbose,
     )
 
-    rewritten_query = rewrite_query(question, model_name=model_name, verbose=verbose)
     metadata_filter = {"rag_type": "advanced"}
-    scored_documents = retrieve_documents(
+    retrieval = retrieve(
         vector_store,
-        rewritten_query,
-        k=k,
-        metadata_filter=metadata_filter,
-    )
-
-    if verbose:
-        print_retrieval_debug(rewritten_query, scored_documents, metadata_filter)
-
-    reranked_documents = rerank_documents(
         question,
-        scored_documents,
+        model_name=model_name,
+        k=k,
         keep=keep,
+        metadata_filter=metadata_filter,
         verbose=verbose,
     )
+
     answer = generate_answer(
         question,
-        reranked_documents,
+        retrieval["reranked_documents"],
         model_name=model_name,
         verbose=verbose,
     )
@@ -442,9 +479,9 @@ def advanced_rag(
     return {
         "documents": documents,
         "chunks": chunks,
-        "rewritten_query": rewritten_query,
-        "retrieved_documents": [doc for doc, _score in scored_documents],
-        "reranked_documents": reranked_documents,
+        "rewritten_query": retrieval["rewritten_query"],
+        "retrieved_documents": [doc for doc, _score in retrieval["scored_documents"]],
+        "reranked_documents": retrieval["reranked_documents"],
         "answer": answer,
     }
 

@@ -32,7 +32,7 @@ The example intentionally uses a tiny local `HashingEmbeddings` class. That keep
 | Split | `split_documents()` | Long documents become smaller retrievable chunks |
 | Embed | `create_embeddings()` | Chunks and questions must use the same embedding model |
 | Store | `create_vector_store()` | Vectors, text, and metadata are indexed together |
-| Retrieve | `retrieve_documents()` | The question pulls back the top matching chunks |
+| Retrieve | `retrieve()` (wraps `create_retriever()` + `retrieve_documents()`) | The question pulls back the top matching chunks |
 | Augment | `format_documents()` + `build_prompt()` | Retrieved text becomes prompt context |
 | Generate | `generate_answer()` | The model answers from the retrieved context |
 
@@ -329,7 +329,34 @@ Chroma sample ids: ['basic-rag-0-...']
 
 ## Stage 5: Retrieve
 
-A retriever wraps the vector store in a chain-friendly interface:
+`retrieve()` is the single entry point for this stage — the "R" in RAG. It turns the vector store into a retriever and fetches the matching chunks, so the rest of the pipeline calls one function instead of wiring `create_retriever()` and `retrieve_documents()` together by hand each time:
+
+```python
+def retrieve(
+    vector_store,
+    embeddings: Embeddings,
+    question: str,
+    *,
+    k: int = 3,
+    store_type: str = "memory",
+    verbose: bool = True,
+) -> dict[str, object]:
+    retriever = create_retriever(vector_store, k=k)
+    retrieved_documents = retrieve_documents(retriever, question)
+
+    scored_documents = None
+    if verbose:
+        scored_documents = retrieve_documents_with_scores(vector_store, question, k=k)
+        print_retrieval_debug(store_type, question, embeddings, scored_documents)
+
+    return {
+        "retriever": retriever,
+        "retrieved_documents": retrieved_documents,
+        "scored_documents": scored_documents,
+    }
+```
+
+Underneath, `create_retriever()` just wraps the vector store in a chain-friendly interface, and `retrieve_documents()` calls it:
 
 ```python
 retriever = vector_store.as_retriever(search_kwargs={"k": 3})
@@ -348,12 +375,12 @@ The most useful debugging habit in RAG is to print retrieved chunks before gener
 
 ![Basic RAG debug loop](images/basic-rag-debug-loop.png)
 
-The example retrieves two ways:
+`retrieve()` fetches chunks two ways, and this diagram is what that duality is for — one path feeds the chain, the other feeds your debugging:
 
-- `retriever.invoke(question)` for the normal RAG chain input.
-- `vector_store.similarity_search_with_score(question, k=k)` for the learning trace.
+- `retriever.invoke(question)` (inside `retrieve_documents()`) for the normal RAG chain input.
+- `vector_store.similarity_search_with_score(question, k=k)` (inside `retrieve_documents_with_scores()`) for the learning trace, printed only when `verbose=True`.
 
-The verbose trace prints the query embedding and the ranked retrieved chunks:
+The verbose trace prints the query embedding and the ranked retrieved chunks — this is `retrieve()` calling `print_retrieval_debug()`:
 
 ```text
 5. Retrieve from InMemoryVectorStore
@@ -451,7 +478,7 @@ Fallback behavior: rank retrieved sentences by token overlap with the question
 
 ## Read the Whole Flow
 
-The `basic_rag()` method ties every stage together:
+The `basic_rag()` method ties every stage together. Read it and the stages map directly onto the RAG acronym: **R**etrieve, then **A**ugment + **G**enerate (the augment step is folded into `generate_answer()`, which is already covered above):
 
 ```python
 def basic_rag(question: str, *, source_path: Path = DEFAULT_SOURCE_PATH, k: int = 3):
@@ -459,8 +486,10 @@ def basic_rag(question: str, *, source_path: Path = DEFAULT_SOURCE_PATH, k: int 
     chunks = split_documents(documents)
     embeddings = create_embeddings()
     vector_store = create_vector_store(chunks, embeddings)
-    retriever = create_retriever(vector_store, k=k)
-    retrieved_documents = retrieve_documents(retriever, question)
+
+    retrieval = retrieve(vector_store, embeddings, question, k=k)
+    retrieved_documents = retrieval["retrieved_documents"]
+
     answer = generate_answer(question, retrieved_documents)
     ...
 ```

@@ -203,7 +203,45 @@ The script deletes the same ids before upserting so repeated demo runs do not ac
 
 ## Stage 5: Retrieve
 
-Advanced RAG improves retrieval in three parts.
+`retrieve()` is the single entry point for this stage — the "R" in RAG, expanded with Advanced RAG's production-style improvements. It wraps the three parts below (query rewrite, Pinecone retrieval, rerank) behind one call, so `advanced_rag()` doesn't have to wire them together itself:
+
+```python
+def retrieve(
+    vector_store,
+    question: str,
+    *,
+    model_name: str,
+    k: int = 4,
+    keep: int = 3,
+    metadata_filter: dict[str, Any] | None = None,
+    verbose: bool = True,
+) -> dict[str, Any]:
+    rewritten_query = rewrite_query(question, model_name=model_name, verbose=verbose)
+    scored_documents = retrieve_documents(
+        vector_store,
+        rewritten_query,
+        k=k,
+        metadata_filter=metadata_filter,
+    )
+
+    if verbose:
+        print_retrieval_debug(rewritten_query, scored_documents, metadata_filter)
+
+    reranked_documents = rerank_documents(
+        question,
+        scored_documents,
+        keep=keep,
+        verbose=verbose,
+    )
+
+    return {
+        "rewritten_query": rewritten_query,
+        "scored_documents": scored_documents,
+        "reranked_documents": reranked_documents,
+    }
+```
+
+Advanced RAG improves retrieval in three parts, and each one below is a step inside `retrieve()`.
 
 ### 5a. Query Rewrite
 
@@ -252,6 +290,8 @@ combined_score = lexical_overlap - float(vector_score)
 This is intentionally simple. Production systems often use a cross-encoder reranker or an LLM-based relevance grader. The point of the tutorial is to show where reranking fits in the pipeline.
 
 ![Advanced RAG retrieval and reranking](images/advanced-rag-retrieve-rerank.png)
+
+This diagram is `retrieve()` end to end: Query Rewrite is `rewrite_query()`, Query Embed + Pinecone Search is `retrieve_documents()`, and Rerank is `rerank_documents()` — three function calls, one entry point.
 
 ## Stage 6: Augment
 
