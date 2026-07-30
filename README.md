@@ -1,4 +1,4 @@
-<!-- markdownlint-disable MD029 -- Learning Path uses one continuous 1-32 sequence across sections, by design. -->
+<!-- markdownlint-disable MD029 -- Learning Path uses one continuous 1-33 sequence across sections, by design. -->
 
 # Overview
 
@@ -79,10 +79,11 @@ Single chains that get better answers out of one model call (or a few), before i
 
 Get external data (files, web pages, PDFs) into a model's context before you need agents to act on it. See [docs/Context_Engineering.md](docs/Context_Engineering.md).
 
-14. **Loading a local text file** — [src/context_engineering/loaders_chunking/TextLoader.py](src/context_engineering/loaders_chunking/TextLoader.py)
-15. **Loading a web page** — [src/context_engineering/loaders_chunking/WebLoader.py](src/context_engineering/loaders_chunking/WebLoader.py)
-16. **The `Document` object, `DirectoryLoader`, and `PyPDFLoader`** — [src/context_engineering/loaders_chunking/Document_Loaders.py](src/context_engineering/loaders_chunking/Document_Loaders.py)
-17. **Splitters and chunking strategy** (`chunk_size`/`chunk_overlap`) — [src/context_engineering/loaders_chunking/chunking_splitters.py](src/context_engineering/loaders_chunking/chunking_splitters.py)
+14. **Loading a local text file** — [src/context_engineering/loaders/TextLoader.py](src/context_engineering/loaders/TextLoader.py)
+15. **Loading a web page** — [src/context_engineering/loaders/WebLoader.py](src/context_engineering/loaders/WebLoader.py)
+16. **The `Document` object, `DirectoryLoader`, and `PyPDFLoader`** — [src/context_engineering/loaders/Document_Loaders.py](src/context_engineering/loaders/Document_Loaders.py)
+17. **Chunking strategies** (`CharacterTextSplitter`, `RecursiveCharacterTextSplitter`, `TokenTextSplitter`, `MarkdownHeaderTextSplitter`, code splitting) — [src/context_engineering/chunking/chunking_strategies.py](src/context_engineering/chunking/chunking_strategies.py)
+18. **Comparing chunking strategies, sizes, and `chunk_overlap`** — [src/context_engineering/chunking/chunking_examples.py](src/context_engineering/chunking/chunking_examples.py)
 
 Once chunks exist, the next question is how to embed, index, and retrieve them at query time to ground an LLM's answer — start with **[docs/rag/Basic_RAG.md](docs/rag/Basic_RAG.md)** and its runnable example ([basic_rag.py](src/context_engineering/rags/basic_rag.py)), then move to **[docs/rag/Advanced_RAG.md](docs/rag/Advanced_RAG.md)** and [advanced_rag.py](src/context_engineering/rags/advanced_rag.py) for query rewriting, Pinecone, and reranking. Use **[docs/rag/RAG.md](docs/rag/RAG.md)** for the broader architecture guide. The retrieval-augmentation chain shape it builds on is previewed with a stub retriever in step 7 above ([runnable_passthrough_context.py](src/context_engineering/runnable_passthrough_context.py)).
 
@@ -90,36 +91,36 @@ Once chunks exist, the next question is how to embed, index, and retrieve them a
 
 Move from chains to agents: a model that decides what to do next, optionally calling tools. See [docs/Prompt_Engineering.md § ReAct Pattern](docs/Prompt_Engineering.md#react-reasoning--acting-pattern).
 
-18. **Your first agent** (no tools) — [src/agents/simple_agent.py](src/agents/simple_agent.py)
-19. **Streaming an agent's output** — [src/agents/streaming_agent.py](src/agents/streaming_agent.py)
-20. **Agent with a calculator tool** — [src/agent-tools/calc_tool_agent.py](src/agent-tools/calc_tool_agent.py)
-21. **Agent with a web-search tool** — [src/agent-tools/web_search_tool_agent.py](src/agent-tools/web_search_tool_agent.py)
-22. **ReAct pattern** (making the Thought → Action → Observation loop visible) — [src/prompt_engineering/ReAct_Pattern.py](src/prompt_engineering/ReAct_Pattern.py)
-23. **Agent returning structured output** — [src/agents/structured_output_agent.py](src/agents/structured_output_agent.py)
-24. **Multimodal input** (text, image, audio) — [src/agents/multimodal_messages_agent.py](src/agents/multimodal_messages_agent.py)
-25. **Project: personal chef agent** (tool-using agent end to end) — [src/agents/personal-chef-agent/personal_chef_agent.py](src/agents/personal-chef-agent/personal_chef_agent.py)
+19. **Your first agent** (no tools) — [src/agents/simple_agent.py](src/agents/simple_agent.py)
+20. **Streaming an agent's output** — [src/agents/streaming_agent.py](src/agents/streaming_agent.py)
+21. **Agent with a calculator tool** — [src/agent-tools/calc_tool_agent.py](src/agent-tools/calc_tool_agent.py)
+22. **Agent with a web-search tool** — [src/agent-tools/web_search_tool_agent.py](src/agent-tools/web_search_tool_agent.py)
+23. **ReAct pattern** (making the Thought → Action → Observation loop visible) — [src/prompt_engineering/ReAct_Pattern.py](src/prompt_engineering/ReAct_Pattern.py)
+24. **Agent returning structured output** — [src/agents/structured_output_agent.py](src/agents/structured_output_agent.py)
+25. **Multimodal input** (text, image, audio) — [src/agents/multimodal_messages_agent.py](src/agents/multimodal_messages_agent.py)
+26. **Project: personal chef agent** (tool-using agent end to end) — [src/agents/personal-chef-agent/personal_chef_agent.py](src/agents/personal-chef-agent/personal_chef_agent.py)
 
 ### 8. Conversation Memory
 
 Now that agents can act, give them memory across turns. See [docs/Prompt_Engineering.md § Conversation Memory Patterns](docs/Prompt_Engineering.md#conversation-memory-patterns).
 
-26. **Conversational memory via a checkpointer** — [src/context_engineering/state_memory.py](src/context_engineering/state_memory.py)
-27. **Buffer vs. Window vs. Summary memory** — [src/context_engineering/Memory_Pattern.py](src/context_engineering/Memory_Pattern.py)
+27. **Conversational memory via a checkpointer** — [src/context_engineering/state_memory.py](src/context_engineering/state_memory.py)
+28. **Buffer vs. Window vs. Summary memory** — [src/context_engineering/Memory_Pattern.py](src/context_engineering/Memory_Pattern.py)
 
 ### 9. Securing Prompts
 
 The capstone: harden everything above against a user or a retrieved document trying to hijack the agent's instructions. See [docs/Prompt_Engineering.md § System Prompts & Injection-Resistant Design](docs/Prompt_Engineering.md#system-prompts--injection-resistant-design).
 
-28. **Injection-resistant system prompt design** — [src/prompt_engineering/SystemPrompt_Pattern.py](src/prompt_engineering/SystemPrompt_Pattern.py)
+29. **Injection-resistant system prompt design** — [src/prompt_engineering/SystemPrompt_Pattern.py](src/prompt_engineering/SystemPrompt_Pattern.py)
 
 ### 10. LLM Reliability & Cost
 
 Everything above assumes a call succeeds. Close the loop: handle it when a call fails, avoid triggering failures in the first place, and know what each call actually costs — across all four providers used in this repo. See [docs/LLM_Reliability_Cost.md](docs/LLM_Reliability_Cost.md).
 
-29. **Retries and exponential backoff** (built-in `max_retries` and custom `tenacity` policies) — [src/llm_reliability/retries_and_backoff.py](src/llm_reliability/retries_and_backoff.py)
-30. **Client-side rate limiting** (`InMemoryRateLimiter`) — [src/llm_reliability/rate_limiting.py](src/llm_reliability/rate_limiting.py)
-31. **Token counting** (pre-call estimates vs. actual `usage_metadata`) — [src/llm_reliability/token_counting.py](src/llm_reliability/token_counting.py)
-32. **Cost estimation** (pricing table + cross-provider `get_usage_metadata_callback`) — [src/llm_reliability/cost_estimation.py](src/llm_reliability/cost_estimation.py)
+30. **Retries and exponential backoff** (built-in `max_retries` and custom `tenacity` policies) — [src/llm_reliability/retries_and_backoff.py](src/llm_reliability/retries_and_backoff.py)
+31. **Client-side rate limiting** (`InMemoryRateLimiter`) — [src/llm_reliability/rate_limiting.py](src/llm_reliability/rate_limiting.py)
+32. **Token counting** (pre-call estimates vs. actual `usage_metadata`) — [src/llm_reliability/token_counting.py](src/llm_reliability/token_counting.py)
+33. **Cost estimation** (pricing table + cross-provider `get_usage_metadata_callback`) — [src/llm_reliability/cost_estimation.py](src/llm_reliability/cost_estimation.py)
 
 ## Bonus: Notebooks
 

@@ -9,11 +9,17 @@ directly.
 """
 
 import os
+import sys
 import tempfile
 from pathlib import Path
 
 from langchain_core.documents import Document
-from loaders import iter_directory, load_pdf
+
+SRC_ROOT = Path(__file__).resolve().parents[2]
+if str(SRC_ROOT) not in sys.path:
+    sys.path.append(str(SRC_ROOT))
+
+from context_engineering.loaders import iter_directory, load_pdf  # noqa: E402
 
 PDF_FILE_PATH = os.path.join(
     os.path.dirname(__file__), "..", "resources", "langchain_demo.pdf"

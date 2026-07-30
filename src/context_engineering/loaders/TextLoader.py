@@ -6,8 +6,14 @@ TextLoader is sunset, so loaders.load_text_file() reimplements it directly.
 """
 
 import os
+import sys
+from pathlib import Path
 
-from loaders import load_text_file as _load_text_file
+SRC_ROOT = Path(__file__).resolve().parents[2]
+if str(SRC_ROOT) not in sys.path:
+    sys.path.append(str(SRC_ROOT))
+
+from context_engineering.loaders import load_text_file as _load_text_file  # noqa: E402
 
 SAMPLE_FILE_PATH = os.path.join(
     os.path.dirname(__file__), "..", "resources", "sample.txt"

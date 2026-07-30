@@ -8,10 +8,16 @@ WebBaseLoader did internally.
 """
 
 import os
+import sys
+from pathlib import Path
 
 os.environ.setdefault("USER_AGENT", "do-langchain-example/1.0")
 
-from loaders import load_web_page as _load_web_page
+SRC_ROOT = Path(__file__).resolve().parents[2]
+if str(SRC_ROOT) not in sys.path:
+    sys.path.append(str(SRC_ROOT))
+
+from context_engineering.loaders import load_web_page as _load_web_page  # noqa: E402
 
 WEB_PATHS = [
     "https://python.langchain.com/docs/concepts/document_loaders/",

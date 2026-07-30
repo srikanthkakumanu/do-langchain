@@ -1,17 +1,29 @@
 """
 Text splitting and chunking using LangChain V.1
 This example demonstrates the different text splitter strategies available in
-langchain_text_splitters, compares how they chunk the same source document, and
+chunking_strategies.py, compares how they chunk the same source document, and
 shows why chunk_overlap matters when splitting text for retrieval.
 """
 
 import os
+import sys
+from pathlib import Path
 
-from loaders import load_pdf, load_text_file
+SRC_ROOT = Path(__file__).resolve().parents[2]
+if str(SRC_ROOT) not in sys.path:
+    sys.path.append(str(SRC_ROOT))
+
+from context_engineering.chunking import (  # noqa: E402
+    split_by_character,
+    split_by_tokens,
+    split_code,
+    split_documents,
+    split_markdown_by_headers,
+    split_recursive,
+)
+from context_engineering.loaders import load_pdf, load_text_file  # noqa: E402
 from langchain_text_splitters import (
     CharacterTextSplitter,
-    Language,
-    MarkdownHeaderTextSplitter,
     RecursiveCharacterTextSplitter,
     TokenTextSplitter,
 )
@@ -60,8 +72,7 @@ def character_splitter():
     """Splits text on a single fixed separator (CharacterTextSplitter)."""
 
     text = _load_sample_text()
-    splitter = CharacterTextSplitter(separator="\n\n", chunk_size=150, chunk_overlap=0)
-    chunks = splitter.split_text(text)
+    chunks = split_by_character(text, separator="\n\n", chunk_size=150, chunk_overlap=0)
 
     print(f"CharacterTextSplitter produced {len(chunks)} chunk(s)")
     for i, chunk in enumerate(chunks):
@@ -73,12 +84,12 @@ def recursive_splitter():
     word) until each piece fits chunk_size (RecursiveCharacterTextSplitter)."""
 
     text = _load_sample_text()
-    splitter = RecursiveCharacterTextSplitter(
+    chunks = split_recursive(
+        text,
         chunk_size=150,
         chunk_overlap=20,
         separators=["\n\n", "\n", ". ", " ", ""],
     )
-    chunks = splitter.split_text(text)
 
     print(f"RecursiveCharacterTextSplitter produced {len(chunks)} chunk(s)")
     for i, chunk in enumerate(chunks):
@@ -90,8 +101,9 @@ def token_splitter():
     chunks aligned with a model's actual context window (TokenTextSplitter)."""
 
     text = _load_sample_text()
-    splitter = TokenTextSplitter(encoding_name="cl100k_base", chunk_size=40, chunk_overlap=5)
-    chunks = splitter.split_text(text)
+    chunks = split_by_tokens(
+        text, encoding_name="cl100k_base", chunk_size=40, chunk_overlap=5
+    )
 
     print(f"TokenTextSplitter produced {len(chunks)} chunk(s)")
     for i, chunk in enumerate(chunks):
@@ -103,9 +115,7 @@ def markdown_header_splitter():
     chunk metadata instead of duplicating it in every chunk's content
     (MarkdownHeaderTextSplitter)."""
 
-    headers_to_split_on = [("#", "Header 1"), ("##", "Header 2")]
-    splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
-    chunks = splitter.split_text(MARKDOWN_TEXT)
+    chunks = split_markdown_by_headers(MARKDOWN_TEXT)
 
     print(f"MarkdownHeaderTextSplitter produced {len(chunks)} chunk(s)")
     for i, chunk in enumerate(chunks):
@@ -119,10 +129,7 @@ def code_splitter():
     functions and classes instead of mid-statement (RecursiveCharacterTextSplitter
     .from_language)."""
 
-    splitter = RecursiveCharacterTextSplitter.from_language(
-        language=Language.PYTHON, chunk_size=120, chunk_overlap=0
-    )
-    chunks = splitter.split_text(PYTHON_CODE)
+    chunks = split_code(PYTHON_CODE, chunk_size=120, chunk_overlap=0)
 
     print(f"Language.PYTHON splitter produced {len(chunks)} chunk(s)")
     for i, chunk in enumerate(chunks):
@@ -135,8 +142,7 @@ def pdf_splitter():
     onto every chunk derived from it."""
 
     documents = load_pdf(PDF_FILE_PATH)
-    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-    chunks = splitter.split_documents(documents)
+    chunks = split_documents(documents, chunk_size=500, chunk_overlap=50)
 
     print(f"Loaded {len(documents)} page(s) from PDF")
     print(f"Split into {len(chunks)} chunk(s)")
@@ -178,8 +184,7 @@ def compare_chunk_sizes():
     print(f"Source text length: {len(text)} characters\n")
 
     for chunk_size in (50, 100, 200, 400):
-        splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=0)
-        chunks = splitter.split_text(text)
+        chunks = split_recursive(text, chunk_size=chunk_size, chunk_overlap=0)
         sizes = [len(chunk) for chunk in chunks]
         print(f"chunk_size={chunk_size}: {len(chunks)} chunk(s), sizes={sizes}")
 
@@ -195,15 +200,12 @@ def overlap_importance():
     text = " ".join(_load_sample_text().split())
     chunk_size = 120
 
-    no_overlap = RecursiveCharacterTextSplitter(
-        chunk_size=chunk_size, chunk_overlap=0, separators=[" ", ""]
+    no_overlap_chunks = split_recursive(
+        text, chunk_size=chunk_size, chunk_overlap=0, separators=[" ", ""]
     )
-    with_overlap = RecursiveCharacterTextSplitter(
-        chunk_size=chunk_size, chunk_overlap=40, separators=[" ", ""]
+    with_overlap_chunks = split_recursive(
+        text, chunk_size=chunk_size, chunk_overlap=40, separators=[" ", ""]
     )
-
-    no_overlap_chunks = no_overlap.split_text(text)
-    with_overlap_chunks = with_overlap.split_text(text)
 
     print("--- Without chunk_overlap ---")
     for i, chunk in enumerate(no_overlap_chunks):

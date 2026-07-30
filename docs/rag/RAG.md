@@ -314,7 +314,7 @@ For learning, `InMemoryVectorStore` is enough:
 from langchain_core.vectorstores import InMemoryVectorStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from loaders import load_pdf
+from context_engineering.loaders import load_pdf
 
 documents = load_pdf(pdf_path)
 

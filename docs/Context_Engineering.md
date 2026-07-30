@@ -1,8 +1,8 @@
 # Context Engineering
 
-A hands-on tutorial on **context engineering**: getting the right external data — a file, a web page, a PDF — into an LLM's limited context window as clean, well-sized, retrievable pieces. It walks the full pipeline in order: **loading** raw sources into LangChain `Document` objects, **splitting** those documents into chunks with a text splitter, and **chunking** strategy — comparing splitters, tuning `chunk_size`, and using `chunk_overlap` — to produce chunks that are actually good retrieval units. Examples are runnable from [Document_Loaders.py](../src/context_engineering/loaders_chunking/Document_Loaders.py), [TextLoader.py](../src/context_engineering/loaders_chunking/TextLoader.py), [WebLoader.py](../src/context_engineering/loaders_chunking/WebLoader.py), and [chunking_splitters.py](../src/context_engineering/loaders_chunking/chunking_splitters.py), all using **LangChain 1.3** (`langchain-text-splitters` 1.1, current as of this writing).
+A hands-on tutorial on **context engineering**: getting the right external data — a file, a web page, a PDF — into an LLM's limited context window as clean, well-sized, retrievable pieces. It walks the full pipeline in order: **loading** raw sources into LangChain `Document` objects, **splitting** those documents into chunks with a text splitter, and **chunking** strategy — comparing splitters, tuning `chunk_size`, and using `chunk_overlap` — to produce chunks that are actually good retrieval units. Loading examples are runnable from [Document_Loaders.py](../src/context_engineering/loaders/Document_Loaders.py), [TextLoader.py](../src/context_engineering/loaders/TextLoader.py), and [WebLoader.py](../src/context_engineering/loaders/WebLoader.py); chunking examples from [chunking_strategies.py](../src/context_engineering/chunking/chunking_strategies.py) and [chunking_examples.py](../src/context_engineering/chunking/chunking_examples.py) — all using **LangChain 1.3** (`langchain-text-splitters` 1.1, current as of this writing).
 
-> `langchain-community` — the package that used to provide `TextLoader`, `WebBaseLoader`, `DirectoryLoader`, and `PyPDFLoader` — was sunset and archived in June 2026, with no dedicated partner package replacing these thin, single-purpose loaders. The loading examples below reimplement them directly on top of the libraries they always wrapped internally (the standard library, `pypdf`, `requests`, and `BeautifulSoup`), in [loaders.py](../src/context_engineering/loaders_chunking/loaders.py). Behavior and `Document` output are unchanged.
+> `langchain-community` — the package that used to provide `TextLoader`, `WebBaseLoader`, `DirectoryLoader`, and `PyPDFLoader` — was sunset and archived in June 2026, with no dedicated partner package replacing these thin, single-purpose loaders. The loading examples below reimplement them directly on top of the libraries they always wrapped internally (the standard library, `pypdf`, `requests`, and `BeautifulSoup`), in [loaders.py](../src/context_engineering/loaders/loaders.py). Behavior and `Document` output are unchanged.
 
 ## Table of Contents
 
@@ -55,7 +55,7 @@ Document loaders read data from a source (a file, a directory, a web page, a PDF
 document = load_text_file(path)
 ```
 
-[loaders.py](../src/context_engineering/loaders_chunking/loaders.py) mirrors the two entry points the old `langchain-community` loader classes exposed:
+[loaders.py](../src/context_engineering/loaders/loaders.py) mirrors the two entry points the old `langchain-community` loader classes exposed:
 
 - an eager function that reads the whole source and returns `Document`(s).
 - `iter_directory()` — a generator that yields one `Document` at a time instead of holding everything in memory (the `lazy_load()` equivalent).
@@ -73,7 +73,7 @@ document = load_text_file(path)
 Reads a single local text file into one `Document`. `page_content` holds the raw file text and `metadata["source"]` holds the file path.
 
 ```python
-from loaders import load_text_file
+from context_engineering.loaders import load_text_file
 
 document = load_text_file(SAMPLE_FILE_PATH, encoding="utf-8")
 
@@ -88,7 +88,7 @@ Internally it's `open(path, encoding=encoding).read()` wrapped in a `Document` �
 Fetches a URL with `requests` and parses the HTML with BeautifulSoup, returning the extracted page text as one `Document`.
 
 ```python
-from loaders import load_web_page
+from context_engineering.loaders import load_web_page
 
 document = load_web_page("https://python.langchain.com/docs/concepts/document_loaders/")
 
@@ -103,7 +103,7 @@ Set the `USER_AGENT` environment variable before fetching (e.g. `os.environ.setd
 Walks a directory, matches files against a glob pattern, and lazily loads each one, yielding each file's `Document` in turn.
 
 ```python
-from loaders import iter_directory
+from context_engineering.loaders import iter_directory
 
 for doc in iter_directory(tmpdir, glob="*.txt"):
     print(doc.page_content[:50])
@@ -117,7 +117,7 @@ Generator-based, so it loads and yields one file at a time instead of reading th
 Loads a PDF and returns one `Document` per page, with page-level metadata (`page`, `total_pages`, `source`). It's backed directly by `pypdf` (v6 as of this writing) — the same library `langchain-community`'s `PyPDFLoader` used under the hood.
 
 ```python
-from loaders import load_pdf
+from context_engineering.loaders import load_pdf
 
 documents = load_pdf(pdf_path)
 
@@ -158,7 +158,7 @@ print(doc.metadata)
 
 ## Text Splitters
 
-Text splitters break large text (or `Document`s) into smaller chunks that fit within a model's context window and make good retrieval units. They live in `langchain_text_splitters` and share two entry points:
+Text splitters break large text (or `Document`s) into smaller chunks that fit within a model's context window and make good retrieval units. They live in `langchain_text_splitters` and share two entry points. [chunking_strategies.py](../src/context_engineering/chunking/chunking_strategies.py) wraps each strategy below in its own reusable function.
 
 ```python
 splitter = RecursiveCharacterTextSplitter(chunk_size=150, chunk_overlap=20)
@@ -270,7 +270,7 @@ print(chunks[0].metadata)  # {'page': 0, 'source': '...', ...}
 
 ## Chunking: Strategy, Size, and Overlap
 
-Chunking is the *outcome* of running a splitter over a document — the pieces that actually get embedded, stored, and retrieved. The splitter (above) is the tool; chunking is the result, and the same source text can chunk very differently depending on which splitter and settings are picked. This section compares that outcome: how splitter strategies differ, how `chunk_size` trades off against chunk count, and why `chunk_overlap` is worth the extra stored text.
+Chunking is the *outcome* of running a splitter over a document — the pieces that actually get embedded, stored, and retrieved. The splitter (above) is the tool; chunking is the result, and the same source text can chunk very differently depending on which splitter and settings are picked. This section compares that outcome: how splitter strategies differ, how `chunk_size` trades off against chunk count, and why `chunk_overlap` is worth the extra stored text. [chunking_examples.py](../src/context_engineering/chunking/chunking_examples.py) runs each comparison below.
 
 Models and embeddings have a limited context window, so a whole document usually can't be handed over (or embedded) as one unit. Chunking splits it into pieces that:
 
